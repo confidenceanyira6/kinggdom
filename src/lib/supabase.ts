@@ -15,15 +15,14 @@ export const supabase = createClient(url ?? 'http://localhost', anonKey ?? 'miss
   db: { schema: 'kingdom' },
 });
 
-/** Edge functions the app is allowed to call (all require a signed-in user). */
-const ALLOWED_FUNCTIONS = ['submit-move', 'stream-token', 'create-deposit', 'ai-coach', 'send-push'] as const;
+/**
+ * Edge functions the app may call (all need a signed-in user).
+ * `send-push` and `payment-webhook` are SERVER ONLY, and the retail manager
+ * functions in the same project belong to another app, so none are callable here.
+ */
+const ALLOWED_FUNCTIONS = ['submit-move', 'stream-token', 'create-deposit', 'ai-coach'] as const;
 export type KingdomFunction = (typeof ALLOWED_FUNCTIONS)[number];
 
-/**
- * Call a Kingdom edge function. `payment-webhook` is SERVER ONLY and the retail
- * manager functions in the same project belong to another app, so neither is
- * callable from here.
- */
 export async function callFunction<T = unknown>(name: KingdomFunction, body?: Record<string, unknown>): Promise<T> {
   if (!ALLOWED_FUNCTIONS.includes(name)) throw new Error('Function not allowed from the frontend: ' + name);
   const { data, error } = await supabase.functions.invoke(name, { body });
