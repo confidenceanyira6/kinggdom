@@ -1,0 +1,32 @@
+import { createClient } from '@supabase/supabase-js';
+
+/**
+ * Kingdom backend = Supabase project "quantumretailmanager" (ref fpflwkgqdmgmrvsukyop).
+ * Kingdom data lives in the custom schema "kingdom" (NOT public).
+ * Only the publishable/anon key is used here. Never put service_role keys,
+ * DB passwords or payment secrets in the frontend.
+ */
+const url = import.meta.env.VITE_SUPABASE_URL;
+const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+export const isSupabaseConfigured = Boolean(url && anonKey);
+
+export const supabase = createClient(url ?? 'http://localhost', anonKey ?? 'missing-anon-key', {
+  db: { schema: 'kingdom' },
+});
+
+/** Edge functions the app is allowed to call (all require a signed-in user). */
+const ALLOWED_FUNCTIONS = ['submit-move', 'stream-token', 'create-deposit', 'ai-coach', 'send-push'] as const;
+export type KingdomFunction = (typeof ALLOWED_FUNCTIONS)[number];
+
+/**
+ * Call a Kingdom edge function. `payment-webhook` is SERVER ONLY and the retail
+ * manager functions in the same project belong to another app, so neither is
+ * callable from here.
+ */
+export async function callFunction<T = unknown>(name: KingdomFunction, body?: Record<string, unknown>): Promise<T> {
+  if (!ALLOWED_FUNCTIONS.includes(name)) throw new Error('Function not allowed from the frontend: ' + name);
+  const { data, error } = await supabase.functions.invoke(name, { body });
+  if (error) throw error;
+  return data as T;
+}

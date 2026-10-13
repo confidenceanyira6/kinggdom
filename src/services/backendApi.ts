@@ -1,18 +1,28 @@
 import type { ApiClient } from './client';
+import { supabase } from '../lib/supabase';
 
 /**
- * Real backend adapter (Supabase). Intentionally NOT connected yet.
+ * Real backend adapter (Supabase project "quantumretailmanager", schema "kingdom").
  *
- * When the backend is ready, implement each method of ApiClient here
- * (see ./client.ts for the contract) using the public URL + anon key from
- * VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY, then set VITE_USE_MOCK=false.
- * Never ship a service-role key to the browser.
+ * Methods are wired here one group at a time against the real table columns.
+ * Anything not implemented yet rejects with a clear error instead of guessing
+ * table/column names. Money, game moves and payments must go through edge
+ * functions (see ../lib/supabase.ts callFunction), never direct table writes.
  */
 const notConnected = (path: string) => () => Promise.reject(new Error('Backend not connected yet: ' + path));
+
+const implemented: Record<string, Record<string, unknown>> = {
+  auth: {
+    logOut: async () => {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+    },
+  },
+};
 
 export const backendApi: ApiClient = new Proxy({} as ApiClient, {
   get: (_t, ns: string) =>
     new Proxy({}, {
-      get: (_t2, method: string) => notConnected(ns + '.' + method),
+      get: (_t2, method: string) => implemented[ns]?.[method] ?? notConnected(ns + '.' + method),
     }),
 });
