@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { RequireAuth, TabLayout, PlainLayout } from './components/AppLayout';
 import { Spinner } from './components/ui';
+import { useSessionSync } from './hooks/useSessionSync';
 import { useApp } from './store/useApp';
 
 // Every screen is code-split so the first load stays small as the app grows.
@@ -15,7 +16,7 @@ const Discover = lazy(() => import('./pages/Discover'));
 const Search = lazy(() => import('./pages/Search'));
 const Play = lazy(() => import('./pages/Play'));
 const PlayMode = lazy(() => import('./pages/PlayMode'));
-const Game = lazy(() => import('./pages/Game'));
+const GameRouter = lazy(() => import('./pages/GameRouter'));
 const Live = lazy(() => import('./pages/Live'));
 const LiveStream = lazy(() => import('./pages/LiveStream'));
 const WatchMatch = lazy(() => import('./pages/WatchMatch'));
@@ -47,6 +48,7 @@ function Toaster() {
 
 export default function App() {
   const theme = useApp((s) => s.theme);
+  useSessionSync();
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
@@ -75,7 +77,7 @@ export default function App() {
             <Route element={<PlainLayout />}>
               <Route path='/search' element={<Search />} />
               <Route path='/play/:game' element={<PlayMode />} />
-              <Route path='/game/:game' element={<Game />} />
+              <Route path='/game/:game' element={<GameRouter />} />
               <Route path='/live/start' element={<StartStream />} />
               <Route path='/live/:id' element={<LiveStream />} />
               <Route path='/watch/:id' element={<WatchMatch />} />
