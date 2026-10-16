@@ -16,9 +16,14 @@ export default function Home() {
   const feed = useAsync(() => api.feed.list());
   const live = useAsync(() => api.matches.live());
   const notifs = useAsync(() => api.notifications.list());
+  const tours = useAsync(() => api.tournaments.list());
 
   useEffect(() => { api.wallet.get().then((w) => setTokens(w.tokens)); }, [setTokens]);
   const unread = (notifs.data ?? []).filter((n) => !n.read).length;
+
+  // Featured tournament comes from the backend (ids are UUIDs there, so never hardcode one).
+  const all = tours.data ?? [];
+  const featured = all.find((t) => t.status === 'live') ?? all.find((t) => t.status === 'upcoming');
 
   return (
     <div className='screen'>
@@ -37,11 +42,11 @@ export default function Home() {
       <div className='hero row gap12'>
         <Trophy size={44} className='gold' />
         <div className='grow'>
-          <span className='pill' style={{ background: 'rgba(245,196,81,.18)', color: 'var(--gold)' }}>SPONSORED</span>
-          <h3 className='mt8'>Daily Tournament</h3>
-          <p className='small muted'>Win big · Top 1000</p>
+          <span className='pill' style={{ background: 'rgba(245,196,81,.18)', color: 'var(--gold)' }}>{featured?.status === 'live' ? 'LIVE NOW' : 'FEATURED'}</span>
+          <h3 className='mt8'>{featured?.name ?? 'Daily Tournament'}</h3>
+          <p className='small muted'>{featured ? 'Prize pool ' + fmt(featured.prizePool) + ' tokens' : 'Win big · Top 1000'}</p>
         </div>
-        <Button variant='gold' sm onClick={() => nav('/tournaments/t1')}>Join Now</Button>
+        <Button variant='gold' sm onClick={() => nav(featured ? '/tournaments/' + featured.id : '/tournaments')}>{featured ? 'Join Now' : 'Browse'}</Button>
       </div>
 
       <div className='grid4 mt16'>
