@@ -1,69 +1,60 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Bell, Crown, MessageCircle, Plus, Swords, Trophy, Video } from 'lucide-react';
+import { Bell, Plus } from 'lucide-react';
 import { api } from '../services/api';
 import { useApp } from '../store/useApp';
 import { useAsync } from '../hooks/useAsync';
-import { Button, Coin, Empty, Loading, Logo, fmt } from '../components/ui';
-import { PostCard } from '../components/PostCard';
-import { MatchCard } from '../components/MatchCard';
-import { Fab } from '../components/Fab';
+import { Button, Coin, Loading, fmt } from '../components/ui';
+import { Reel } from '../components/Reel';
+import '../styles/reels.css';
+
+type FeedTab = 'following' | 'foryou';
 
 export default function Home() {
   const nav = useNavigate();
   const tokens = useApp((s) => s.tokens);
   const setTokens = useApp((s) => s.setTokens);
   const feed = useAsync(() => api.feed.list());
-  const live = useAsync(() => api.matches.live());
   const notifs = useAsync(() => api.notifications.list());
-  const tours = useAsync(() => api.tournaments.list());
+  const [tab, setTab] = useState<FeedTab>('foryou');
 
   useEffect(() => { api.wallet.get().then((w) => setTokens(w.tokens)); }, [setTokens]);
   const unread = (notifs.data ?? []).filter((n) => !n.read).length;
 
-  // Featured tournament comes from the backend (ids are UUIDs there, so never hardcode one).
-  const all = tours.data ?? [];
-  const featured = all.find((t) => t.status === 'live') ?? all.find((t) => t.status === 'upcoming');
+  const all = feed.data ?? [];
+  const posts = tab === 'following' ? all.filter((p) => p.author.isFollowing) : all;
 
   return (
-    <div className='screen'>
-      <header className='topbar'>
-        <Logo />
-        <div className='row gap8'>
-          <Link to='/chat' className='icon-btn'><MessageCircle size={18} /></Link>
-          <Link to='/notifications' className='icon-btn'><Bell size={18} />{unread > 0 && <i className='badge-dot' />}</Link>
+    <>
+      <header className='reels-top'>
+        <div className='side'>
+          <Link to='/wallet' className='token-pill'>
+            <Coin />{fmt(tokens)}
+            <span className='plus' onClick={(e) => { e.preventDefault(); nav('/store'); }}><Plus size={12} /></span>
+          </Link>
+        </div>
+        <div className='reel-tabs'>
+          <button className={tab === 'following' ? 'active' : ''} onClick={() => setTab('following')}>Following</button>
+          <button className={tab === 'foryou' ? 'active' : ''} onClick={() => setTab('foryou')}>For You</button>
+        </div>
+        <div className='side end'>
+          <Link to='/create-post' className='icon-btn' aria-label='Create post'><Plus size={18} /></Link>
+          <Link to='/notifications' className='icon-btn' aria-label='Notifications'><Bell size={18} />{unread > 0 && <i className='badge-dot' />}</Link>
         </div>
       </header>
 
-      <div className='row between mb12'>
-        <Link to='/wallet' className='token-pill'><Coin />{fmt(tokens)}<span className='plus' onClick={(e) => { e.preventDefault(); nav('/store'); }}><Plus size={14} /></span></Link>
-      </div>
-
-      <div className='hero row gap12'>
-        <Trophy size={44} className='gold' />
-        <div className='grow'>
-          <span className='pill' style={{ background: 'rgba(245,196,81,.18)', color: 'var(--gold)' }}>{featured?.status === 'live' ? 'LIVE NOW' : 'FEATURED'}</span>
-          <h3 className='mt8'>{featured?.name ?? 'Daily Tournament'}</h3>
-          <p className='small muted'>{featured ? 'Prize pool ' + fmt(featured.prizePool) + ' tokens' : 'Win big · Top 1000'}</p>
-        </div>
-        <Button variant='gold' sm onClick={() => nav(featured ? '/tournaments/' + featured.id : '/tournaments')}>{featured ? 'Join Now' : 'Browse'}</Button>
-      </div>
-
-      <div className='grid4 mt16'>
-        <Link to='/play/chess' className='tile'><span className='t-ico'><Crown size={20} /></span>Chess</Link>
-        <Link to='/play/checkers' className='tile'><span className='t-ico'><Swords size={20} /></span>Checkers</Link>
-        <Link to='/tournaments' className='tile'><span className='t-ico'><Trophy size={20} /></span>Tournaments</Link>
-        <Link to='/live' className='tile'><span className='t-ico'><Video size={20} /></span>Stream</Link>
-      </div>
-
-      <div className='section-title'><h3>Live Matches</h3><Link to='/live' className='link small'>See All</Link></div>
-      {live.loading ? <Loading /> : <div className='col gap8'>{(live.data ?? []).slice(0, 2).map((m) => <MatchCard key={m.id} match={m} />)}</div>}
-
-      <div className='section-title'><h3>For you</h3></div>
-      {feed.loading && <Loading />}
-      {feed.error && <Empty text={feed.error} />}
-      {(feed.data ?? []).map((p) => <PostCard key={p.id} post={p} />)}
-      <Fab />
-    </div>
+      <main className='reels' key={tab}>
+        {feed.loading && <div className='reels-state'><Loading /></div>}
+        {feed.error && <div className='reels-state'><p className='muted'>{feed.error}</p></div>}
+        {!feed.loading && !feed.error && posts.length === 0 && (
+          <div className='reels-state'>
+            <h3>{tab === 'following' ? 'Nothing here yet' : 'No posts yet'}</h3>
+            <p className='muted small'>{tab === 'following' ? 'Follow players to see their posts here.' : 'Be the first to share something.'}</p>
+            <Button variant='gold' sm onClick={() => (tab === 'following' ? setTab('foryou') : nav('/create-post'))}>{tab === 'following' ? 'Browse For You' : 'Create post'}</Button>
+          </div>
+        )}
+        {posts.map((p) => <Reel key={p.id} post={p} />)}
+      </main>
+    </>
   );
 }
