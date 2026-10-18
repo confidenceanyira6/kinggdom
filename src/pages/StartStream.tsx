@@ -9,6 +9,13 @@ export default function StartStream() {
   const [game, setGame] = useState<GameType>('chess');
   const [dual, setDual] = useState(true);
   const [audio, setAudio] = useState(false);
+
+  const goLive = () => {
+    const q = new URLSearchParams({ game, dual: dual ? '1' : '0', audio: audio ? '1' : '0' });
+    if (title.trim()) q.set('title', title.trim());
+    nav('/live/self?' + q.toString());
+  };
+
   return (
     <div className='screen nonav'>
       <TopBar title='Start Stream' />
@@ -16,11 +23,11 @@ export default function StartStream() {
       <span className='small muted'>Game</span>
       <div className='row gap8 mt8 mb12'>{(['chess', 'checkers'] as GameType[]).map((g) => <button key={g} className={'chip' + (game === g ? ' active' : '')} onClick={() => setGame(g)}>{g === 'chess' ? 'Chess' : 'Checkers'}</button>)}</div>
       <div className='card'>
-        <div className='list-row'><div className='grow'><b>Show both players</b><div className='tiny muted'>Both cameras visible during the match</div></div><Toggle checked={dual} onChange={setDual} /></div>
+        <div className='list-row'><div className='grow'><b>Show both players</b><div className='tiny muted'>Both faces side by side. Off = your face in the corner</div></div><Toggle checked={dual} onChange={setDual} /></div>
         <div className='list-row'><div className='grow'><b>Audio only</b><div className='tiny muted'>Hide camera, keep the voice</div></div><Toggle checked={audio} onChange={setAudio} /></div>
       </div>
-      <p className='tiny muted mt12 mb12'>Camera and microphone streaming starts working once the live video service is connected.</p>
-      <Button variant='danger' full onClick={() => nav('/live/self')}>● Go Live</Button>
+      <p className='tiny muted mt12 mb12'>Your camera preview shows on this device now. Sending it to viewers (and your opponent's face) starts once the live video service is connected.</p>
+      <Button variant='danger' full onClick={goLive}>● Go Live</Button>
     </div>
   );
 }
