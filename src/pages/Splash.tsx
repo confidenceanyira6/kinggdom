@@ -13,8 +13,9 @@ export default function Splash() {
   return (
     <div className='splash'>
       <Logo big />
-      <p className='muted'>Play · Compete · Connect</p>
-      <div className='splash-foot small muted'>Chess · Checkers · Tournaments · Live Streams · Chat · Gifts</div>
+      <p className='muted'>Play · Connect · Win</p>
+      <div className='splash-bar'><i /></div>
+      <div className='splash-foot small muted'>Loading your kingdom...</div>
     </div>
   );
 }

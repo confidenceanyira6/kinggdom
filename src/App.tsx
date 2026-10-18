@@ -70,6 +70,7 @@ export default function App() {
               <Route path='/discover' element={<Discover />} />
               <Route path='/play' element={<Play />} />
               <Route path='/live' element={<Live />} />
+              <Route path='/chat' element={<Chat />} />
               <Route path='/profile' element={<Profile />} />
               <Route path='/menu' element={<Menu />} />
             </Route>
@@ -88,7 +89,6 @@ export default function App() {
               <Route path='/gift' element={<SendGift />} />
               <Route path='/settings' element={<Settings />} />
               <Route path='/notifications' element={<Notifications />} />
-              <Route path='/chat' element={<Chat />} />
               <Route path='/chat/:id' element={<ChatThread />} />
               <Route path='/friends' element={<Friends />} />
               <Route path='/community' element={<Community />} />
