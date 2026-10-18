@@ -41,11 +41,16 @@ function useSearching(mode: string) {
   return searching;
 }
 
-function PlayerBar({ name, sub, active }: { name: string; sub: string; active: boolean }) {
+type SideName = 'White' | 'Black' | 'Red';
+
+function PlayerBar({ name, side, sub, active }: { name: string; side: SideName; sub?: string; active: boolean }) {
   return (
     <div className='player-bar'>
       <Avatar name={name} size={36} ring={active} />
-      <div className='grow'><b>{name}</b><div className='tiny muted'>{sub}</div></div>
+      <div className='grow'>
+        <div className='row gap8'><b>{name}</b><span className={'side-chip ' + side.toLowerCase()}><i />{side}</span></div>
+        {sub && <div className='tiny muted'>{sub}</div>}
+      </div>
       {active && <span className='pill'>TURN</span>}
     </div>
   );
@@ -119,9 +124,9 @@ function ChessGame({ mode, level, onAgain }: GameProps) {
   const history = game.current.history();
   return (
     <>
-      <PlayerBar name={opp} sub={mode === 'ai' ? 'AI level ' + level : 'Black'} active={turn === 'b'} />
+      <PlayerBar name={opp} side='Black' sub={mode === 'ai' ? 'AI level ' + level : undefined} active={turn === 'b'} />
       <ChessBoard fen={fen} onMove={onMove} side={mode === 'local' ? 'both' : 'w'} last={last} />
-      <PlayerBar name={user.username} sub='White' active={turn === 'w'} />
+      <PlayerBar name={mode === 'local' ? 'Player 1' : user.username} side='White' active={turn === 'w'} />
       <div className='moves'>{history.length === 0 ? <span>Your move, White</span> : history.map((m, i) => <span key={i}>{i % 2 === 0 ? Math.floor(i / 2) + 1 + '.' : ''}{m}</span>)}</div>
       <div className='grid2 mt8'>
         <Button variant='danger' onClick={() => !result && finish({ text: 'You resigned', outcome: 'loss' })}>Resign</Button>
@@ -162,9 +167,9 @@ function CheckersGame({ mode, level, onAgain }: GameProps) {
   const count = (s: Side) => board.flat().filter((p) => p && p.toLowerCase() === s).length;
   return (
     <>
-      <PlayerBar name={opp} sub={'Black · ' + count('b') + ' pieces'} active={turn === 'b'} />
+      <PlayerBar name={opp} side='Black' sub={count('b') + ' pieces'} active={turn === 'b'} />
       <CheckersBoard board={board} turn={turn} cont={cont} side={mode === 'local' ? 'both' : 'r'} onMove={apply} />
-      <PlayerBar name={user.username} sub={'Red · ' + count('r') + ' pieces'} active={turn === 'r'} />
+      <PlayerBar name={mode === 'local' ? 'Player 1' : user.username} side='Red' sub={count('r') + ' pieces'} active={turn === 'r'} />
       <p className='tiny muted tc'>Captures are mandatory. Reach the far row to crown a king.</p>
       <div className='grid2 mt8'>
         <Button variant='danger' onClick={() => !result && finish({ text: 'You resigned', outcome: 'loss' })}>Resign</Button>

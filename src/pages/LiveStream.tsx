@@ -7,6 +7,7 @@ import { useAsync } from '../hooks/useAsync';
 import { useFakeChat } from '../hooks/useDemo';
 import { useCamera } from '../hooks/useCamera';
 import { DemoBoard, FaceCam } from '../components/StreamStage';
+import type { SideLabel } from '../components/StreamStage';
 import { Loading, fmt } from '../components/ui';
 import type { GameType } from '../types';
 import '../styles/stream.css';
@@ -38,6 +39,8 @@ export default function LiveStream() {
   const a = isSelf ? me : m.white;
   const b = m.black;
   const title = isSelf ? sp.get('title') || 'Your live stream' : m.title;
+  const sideA: SideLabel = game === 'chess' ? 'White' : 'Red';
+  const sideB: SideLabel = 'Black';
 
   const send = () => { if (!text.trim()) return; chat.send(me.username, text.trim()); setText(''); };
   const like = () => {
@@ -65,9 +68,9 @@ export default function LiveStream() {
 
       {dual ? (
         <div className='stage-cams dual'>
-          <FaceCam user={a} stream={isSelf ? cam.stream : null} mirror active={turn === 'a'} camOff={isSelf && (audioOnly || !camOn)} />
+          <FaceCam user={a} side={sideA} stream={isSelf ? cam.stream : null} mirror active={turn === 'a'} camOff={isSelf && (audioOnly || !camOn)} />
           <span className='stage-vs'>VS</span>
-          <FaceCam user={b} active={turn === 'b'} />
+          <FaceCam user={b} side={sideB} active={turn === 'b'} />
         </div>
       ) : (
         <div className='stage-cams solo'>
@@ -75,7 +78,7 @@ export default function LiveStream() {
             <b>{title}</b>
             <span>{game === 'chess' ? '♟ Chess' : '⛀ Checkers'} · live with the community</span>
           </div>
-          <FaceCam user={a} stream={cam.stream} mirror big camOff={audioOnly || !camOn} />
+          <FaceCam user={a} side={sideA} stream={cam.stream} mirror big camOff={audioOnly || !camOn} />
         </div>
       )}
 
@@ -91,16 +94,11 @@ export default function LiveStream() {
 
       <div className='stage-input'>
         <input placeholder='Say something...' value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && send()} />
-      </div>
-
-      <div className='stage-rail'>
-        <button className='s-btn' onClick={like} aria-label='Like'><span className='ic'><Heart size={22} /></span>{fmt(likes)}</button>
-        <Link to={'/gift?to=' + a.username} className='s-btn gold' aria-label='Send gift'><span className='ic'><Gift size={22} /></span>Gift</Link>
-        <button className='s-btn' onClick={share} aria-label='Share'><span className='ic'><Share2 size={20} /></span>Share</button>
+        <button className='s-mini' onClick={like} aria-label='Like'><Heart size={20} />{likes > 0 && <i>{fmt(likes)}</i>}</button>
+        <Link to={'/gift?to=' + a.username} className='s-mini gold' aria-label='Send gift'><Gift size={20} /></Link>
+        <button className='s-mini' onClick={share} aria-label='Share'><Share2 size={18} /></button>
         {isSelf && !audioOnly && (
-          <button className='s-btn' onClick={() => setCamOn((c) => !c)} aria-label='Toggle camera'>
-            <span className='ic'>{camOn ? <Video size={20} /> : <VideoOff size={20} />}</span>{camOn ? 'Cam on' : 'Cam off'}
-          </button>
+          <button className='s-mini' onClick={() => setCamOn((c) => !c)} aria-label='Toggle camera'>{camOn ? <Video size={18} /> : <VideoOff size={18} />}</button>
         )}
       </div>
 

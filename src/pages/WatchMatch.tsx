@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Gift } from 'lucide-react';
 import { api } from '../services/api';
 import { useApp } from '../store/useApp';
@@ -22,14 +22,21 @@ export default function WatchMatch() {
 
   if (loading || !m) return <div className='screen nonav'><Loading /></div>;
   const send = () => { if (!text.trim()) return; chat.send(me.username, text.trim()); setText(''); };
+  const first = m.game === 'chess' ? 'White' : 'Red';
 
   return (
     <div className='screen nonav'>
       <TopBar title='Watch Match' />
       <div className='row between mb12'>
-        <div className='row gap8'><Avatar name={m.white.name} size={32} /><b className='small'>{m.white.username}</b></div>
+        <div className='row gap8'>
+          <Avatar name={m.white.name} size={36} />
+          <div><b className='small'>{m.white.username}</b><div><span className={'side-chip ' + first.toLowerCase()}><i />{first}</span></div></div>
+        </div>
         <span className='small muted'>vs</span>
-        <div className='row gap8'><b className='small'>{m.black.username}</b><Avatar name={m.black.name} size={32} /></div>
+        <div className='row gap8'>
+          <div style={{ textAlign: 'right' }}><b className='small'>{m.black.username}</b><div><span className='side-chip black'><i />Black</span></div></div>
+          <Avatar name={m.black.name} size={36} />
+        </div>
       </div>
       <ChessBoard fen={demo.fen} last={demo.last} />
       <div className='moves'>{demo.moves.slice(-10).map((mv, i) => <span key={i}>{mv}</span>)}</div>

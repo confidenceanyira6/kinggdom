@@ -8,8 +8,11 @@ import { ChessBoard } from './ChessBoard';
 import { CheckersBoard } from './CheckersBoard';
 import { Avatar } from './ui';
 
+export type SideLabel = 'White' | 'Black' | 'Red';
+
 interface FaceProps {
   user: User;
+  side?: SideLabel;
   stream?: MediaStream | null;
   mirror?: boolean;
   active?: boolean;
@@ -18,15 +21,22 @@ interface FaceProps {
 }
 
 /** A player's face tile. Shows live video when a stream is given, otherwise their avatar. */
-export function FaceCam({ user, stream, mirror, active, big, camOff }: FaceProps) {
+export function FaceCam({ user, side, stream, mirror, active, big, camOff }: FaceProps) {
   const ref = useRef<HTMLVideoElement>(null);
   const live = !!stream && !camOff;
   useEffect(() => {
-    if (ref.current) ref.current.srcObject = live ? stream! : null;
+    const v = ref.current;
+    if (!v) return;
+    v.srcObject = live ? stream! : null;
+    if (live) {
+      v.muted = true;
+      v.play().catch(() => undefined);
+    }
   }, [stream, live]);
   return (
     <div className={'cam-tile' + (big ? ' big' : '') + (active ? ' active' : '')}>
       {live ? <video ref={ref} autoPlay playsInline muted className={mirror ? 'mirror' : ''} /> : <Avatar name={user.name} size={big ? 64 : 52} />}
+      {side && <span className={'cam-side side-chip ' + side.toLowerCase()}><i />{side}</span>}
       {camOff && <span className='off'><VideoOff size={12} /></span>}
       <div className='nm'>{user.username}<small>{user.rating}</small></div>
     </div>
