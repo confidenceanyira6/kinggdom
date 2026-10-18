@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Search } from 'lucide-react';
+import { Menu as MenuIcon, Search } from 'lucide-react';
 import { api } from '../services/api';
 import { useAsync } from '../hooks/useAsync';
 import { Button, Loading } from '../components/ui';
@@ -19,7 +19,9 @@ export default function Home() {
   return (
     <>
       <header className='reels-top'>
-        <div className='side' />
+        <div className='side'>
+          <Link to='/menu' className='icon-btn' aria-label='Menu'><MenuIcon size={18} /></Link>
+        </div>
         <div className='reel-tabs'>
           <button className={tab === 'following' ? 'active' : ''} onClick={() => setTab('following')}>Following</button>
           <button className={tab === 'foryou' ? 'active' : ''} onClick={() => setTab('foryou')}>For You</button>

@@ -1,16 +1,22 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowDownToLine, ArrowUpFromLine, History } from 'lucide-react';
 import { api } from '../services/api';
 import { useApp } from '../store/useApp';
 import { useAsync } from '../hooks/useAsync';
 import { Button, Coin, Empty, Field, Loading, Sheet, TopBar, fmt } from '../components/ui';
 
+type SheetKind = 'deposit' | 'withdraw' | null;
+
 export default function Wallet() {
   const nav = useNavigate();
+  const [sp] = useSearchParams();
   const { setTokens, toast } = useApp.getState();
   const { data, loading, reload } = useAsync(() => api.wallet.get().then((w) => { setTokens(w.tokens); return w; }));
-  const [sheet, setSheet] = useState<'deposit' | 'withdraw' | null>(null);
+  const [sheet, setSheet] = useState<SheetKind>(() => {
+    const a = sp.get('action');
+    return a === 'withdraw' || a === 'deposit' ? a : null;
+  });
   const [amount, setAmount] = useState('');
   const [busy, setBusy] = useState(false);
 
