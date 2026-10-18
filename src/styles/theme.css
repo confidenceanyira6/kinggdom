@@ -1,0 +1,66 @@
+/* Teal neon theme. Loaded after global.css, so it overrides the old blue theme. */
+:root{--bg:#04141a;--surface:#082229;--card:#0a2830;--blue:#1fe0bb;--blue2:#10b898;--emerald:#2be28a;--border:rgba(30,224,190,.24);--text:#eafaf7;--muted:#86a9aa;--silver:#cfe9e6}
+:root[data-theme=light]{--bg:#effaf8;--surface:#fff;--card:#fff;--text:#062026;--muted:#4d7377;--border:rgba(6,120,105,.2);--blue:#0fb59a;--blue2:#0a9a83}
+.shell{background:radial-gradient(120% 55% at 50% -10%,rgba(30,224,190,.22),transparent 60%),radial-gradient(90% 40% at 100% 100%,rgba(245,196,81,.06),transparent 60%),var(--bg)}
+input,select,textarea{background:rgba(30,224,190,.06)}
+input:focus,select:focus,textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(30,224,190,.2)}
+.card{background:linear-gradient(160deg,rgba(30,224,190,.08),rgba(255,255,255,.01)),var(--card);border:1px solid rgba(30,224,190,.28);box-shadow:0 8px 24px rgba(0,0,0,.28)}
+.hero{background:linear-gradient(120deg,#0b3b3d,#0a2a4a);border:1px solid rgba(245,196,81,.35)}
+.btn.primary{background:linear-gradient(180deg,#38f2cf,#14c7a3);color:#03281f;box-shadow:0 0 18px rgba(30,224,190,.4)}
+.btn.ghost{background:rgba(30,224,190,.06);border:1px solid rgba(30,224,190,.4)}
+.tabs,.icon-btn,.chip,.tile{background:rgba(30,224,190,.07)}
+.tab.active{background:linear-gradient(180deg,#38f2cf,#14c7a3);color:#03281f;box-shadow:0 0 12px rgba(30,224,190,.4)}
+.tile .t-ico{background:rgba(30,224,190,.14);color:var(--blue)}
+.chip.active{border-color:var(--blue);color:var(--blue)}
+.token-pill .plus{background:var(--blue);color:#03281f}
+.bubble.me{background:linear-gradient(180deg,#38f2cf,#14c7a3);color:#03281f}
+.spinner{border-top-color:var(--blue)}
+.progress i{background:linear-gradient(90deg,var(--blue),var(--gold))}
+.sq.l{background:#d6efe9}.sq.d{background:#3b8b82}
+.logo span{background:linear-gradient(180deg,#fff,#9ff5e3);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 14px rgba(30,224,190,.55))}
+:root[data-theme=light] .logo span{background:none;color:var(--text);filter:none}
+.logo.big span{font-size:44px;letter-spacing:-1px;font-weight:800}
+.splash-bar{width:150px;height:4px;border-radius:4px;background:rgba(255,255,255,.12);overflow:hidden;margin-top:26px}
+.splash-bar i{display:block;height:100%;border-radius:4px;background:var(--blue);animation:splashload 1.5s ease-in-out forwards}
+@keyframes splashload{from{width:5%}to{width:100%}}
+
+/* Bottom nav: Home, Discover, +, Inbox, Profile */
+.bnav{background:rgba(3,20,25,.94);align-items:center;padding-top:8px}
+.bn{position:relative;color:var(--muted)}
+.bn.active{color:#fff}
+:root[data-theme=light] .bn.active{color:var(--text)}
+.bn .badge{position:absolute;top:-4px;left:calc(50% + 6px);min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:var(--red);color:#fff;font-size:10px;font-weight:700;font-style:normal;display:flex;align-items:center;justify-content:center}
+.bn.center .bn-ico{width:50px;height:34px;margin-top:0;border-radius:11px;background:#fff;color:#04141a;border:0;box-shadow:-3px 0 0 rgba(30,224,190,.95),3px 0 0 rgba(255,82,122,.95)}
+
+/* Underline tabs */
+.utabs{display:flex;gap:22px;padding:4px 2px 12px}
+.utabs button{position:relative;padding:6px 0;font-weight:700;font-size:15px;color:var(--muted)}
+.utabs button.active{color:var(--text)}
+.utabs button.active:after{content:'';position:absolute;left:0;right:0;bottom:-2px;height:3px;border-radius:3px;background:var(--blue)}
+
+/* Discover */
+.search-bar{width:100%;display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:rgba(30,224,190,.07);border:1px solid var(--border);color:var(--muted);text-align:left;margin-bottom:12px}
+.masonry{columns:2;column-gap:10px}
+.m-card{position:relative;display:block;break-inside:avoid;margin-bottom:10px;border-radius:16px;overflow:hidden;border:1px solid var(--border);color:#fff}
+.m-thumb{display:flex;align-items:center;justify-content:center;font-size:54px}
+.m-cap{position:absolute;left:0;right:0;bottom:0;padding:28px 10px 9px;background:linear-gradient(transparent,rgba(0,0,0,.8))}
+.m-cap b{display:-webkit-box;font-size:12px;line-height:1.25;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.m-cap span{font-size:11px;opacity:.8}
+.m-tag{position:absolute;top:8px;left:8px}
+
+/* Live streams */
+.live-card{position:relative;display:block;height:230px;margin-bottom:12px;border-radius:20px;overflow:hidden;border:1px solid var(--border);color:#fff}
+.live-card .art{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:84px;padding-bottom:40px}
+.live-card .lc-top{position:absolute;top:10px;left:10px;right:10px;display:flex;align-items:center;gap:8px}
+.live-card .lc-bot{position:absolute;left:0;right:0;bottom:0;padding:34px 12px 12px;background:linear-gradient(transparent,rgba(0,0,0,.82));display:flex;align-items:center;gap:10px}
+.vpill{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;background:rgba(0,0,0,.45);font-size:11px;font-weight:600}
+
+/* Game center */
+.gc-head{display:flex;align-items:center;justify-content:space-between;padding:16px 0 12px}
+.gc-feature{position:relative;display:flex;align-items:center;gap:10px;padding:18px;border-radius:20px;overflow:hidden;border:1px solid var(--border);background:linear-gradient(120deg,#0a3b3a,#0a2a3f);box-shadow:0 0 26px rgba(30,224,190,.18);color:#fff}
+.gc-feature .glyph{font-size:84px;line-height:1;margin-left:auto;filter:drop-shadow(0 6px 20px rgba(30,224,190,.45))}
+.gc-mini{display:block;padding:16px;border-radius:16px;text-align:center;border:1px solid var(--border);background:linear-gradient(160deg,rgba(30,224,190,.12),rgba(30,224,190,.02))}
+.gc-mini .glyph{font-size:38px;line-height:1.1}
+.gc-row{display:flex;align-items:center;gap:12px;padding:14px;border-radius:16px;background:rgba(30,224,190,.06);border:1px solid var(--border);margin-bottom:10px}
+.gc-row .ico{width:40px;height:40px;flex:none;border-radius:12px;display:flex;align-items:center;justify-content:center;background:rgba(245,196,81,.12);color:var(--gold)}
+.gc-row .chev{color:var(--muted)}

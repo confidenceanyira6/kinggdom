@@ -1,0 +1,35 @@
+.reels{--nav-h:calc(62px + env(safe-area-inset-bottom));position:fixed;top:0;bottom:var(--nav-h);left:50%;transform:translateX(-50%);width:100%;max-width:480px;overflow-y:scroll;scroll-snap-type:y mandatory;overscroll-behavior:contain;scrollbar-width:none;background:#000}
+.reels::-webkit-scrollbar{display:none}
+.reel{position:relative;height:100%;scroll-snap-align:start;scroll-snap-stop:always;overflow:hidden;display:flex;align-items:center;justify-content:center;user-select:none;-webkit-user-select:none;color:#fff}
+.reel-art{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;padding:0 80px 0 28px;pointer-events:none}
+.reel-art .emoji{font-size:92px;line-height:1;filter:drop-shadow(0 6px 22px rgba(0,0,0,.45))}
+.reel-art .kind{font-weight:700;font-size:13px;letter-spacing:.6px;padding:5px 12px;border-radius:999px;background:rgba(0,0,0,.35);backdrop-filter:blur(6px)}
+.reel-quote{font-family:Poppins,Inter,sans-serif;font-weight:700;font-size:26px;line-height:1.3;text-shadow:0 2px 14px rgba(0,0,0,.4)}
+.reel-shade{position:absolute;left:0;right:0;bottom:0;height:46%;background:linear-gradient(transparent,rgba(0,0,0,.72));pointer-events:none}
+.reel-info{position:absolute;left:14px;right:84px;bottom:18px;display:flex;flex-direction:column;gap:6px;text-shadow:0 1px 6px rgba(0,0,0,.6)}
+.reel-info .who{font-weight:700;font-size:16px}
+.reel-info .cap{font-size:14px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.reel-info .meta{font-size:12px;opacity:.8}
+.reel-rail{position:absolute;right:10px;bottom:18px;display:flex;flex-direction:column;align-items:center;gap:16px}
+.rail-btn{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;font-weight:600;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.6)}
+.rail-btn .ic{width:46px;height:46px;border-radius:50%;background:rgba(0,0,0,.32);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;transition:transform .15s}
+.rail-btn:active .ic{transform:scale(.88)}
+.rail-btn.liked .ic{color:var(--red)}
+.rail-btn.saved .ic{color:var(--gold)}
+.rail-avatar{position:relative;margin-bottom:8px}
+.rail-avatar .follow{position:absolute;left:50%;bottom:-9px;transform:translateX(-50%);width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--red);color:#fff;border:2px solid #000}
+.rail-avatar .follow.done{background:var(--emerald)}
+.burst{position:absolute;pointer-events:none;color:var(--red);filter:drop-shadow(0 4px 14px rgba(0,0,0,.4));animation:burst .8s ease-out forwards}
+@keyframes burst{0%{transform:translate(-50%,-50%) scale(.3) rotate(-12deg);opacity:0}25%{transform:translate(-50%,-50%) scale(1.25) rotate(8deg);opacity:1}100%{transform:translate(-50%,-90%) scale(1) rotate(0);opacity:0}}
+.reels-top{position:fixed;top:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;z-index:25;display:flex;align-items:center;justify-content:space-between;padding:calc(12px + env(safe-area-inset-top)) 14px 26px;background:linear-gradient(rgba(0,0,0,.6),transparent);color:#fff}
+.reels-top .side{min-width:92px;display:flex;align-items:center}
+.reels-top .side.end{justify-content:flex-end;gap:8px}
+.reel-tabs{display:flex;gap:20px;font-weight:700;font-size:16px}
+.reel-tabs button{position:relative;color:rgba(255,255,255,.62);padding:4px 0}
+.reel-tabs button.active{color:#fff}
+.reel-tabs button.active:after{content:'';position:absolute;left:25%;right:25%;bottom:-2px;height:3px;border-radius:3px;background:#fff}
+.reels-top .token-pill{font-size:12px;padding:4px 6px 4px 9px;gap:6px;background:rgba(0,0,0,.35)}
+.reels-top .icon-btn{background:rgba(0,0,0,.35);border-color:rgba(255,255,255,.2);color:#fff}
+.reels-state{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px;text-align:center;color:#fff;background:var(--bg)}
+.sheet.comments{height:70vh;display:flex;flex-direction:column}
+.sheet.comments .list{flex:1;overflow-y:auto;padding:6px 0}

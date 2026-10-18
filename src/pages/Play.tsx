@@ -1,30 +1,52 @@
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Trophy, Video } from 'lucide-react';
-import { TopBar } from '../components/ui';
+import { BarChart3, ChevronRight, Gift, Plus, Trophy, Users, Video } from 'lucide-react';
+import { api } from '../services/api';
+import { useApp } from '../store/useApp';
+import { Coin, fmt } from '../components/ui';
+
+const rows = [
+  { to: '/tournaments', icon: Trophy, title: 'Tournaments', sub: 'Win rewards' },
+  { to: '/referral', icon: Gift, title: 'Rewards', sub: 'Invite friends and earn tokens' },
+  { to: '/leaderboard', icon: BarChart3, title: 'Rankings', sub: 'See top players' },
+  { to: '/friends', icon: Users, title: 'Friends', sub: 'Challenge someone you know' },
+];
 
 export default function Play() {
+  const tokens = useApp((s) => s.tokens);
+  const setTokens = useApp((s) => s.setTokens);
+  useEffect(() => { api.wallet.get().then((w) => setTokens(w.tokens)); }, [setTokens]);
+
   return (
     <div className='screen'>
-      <TopBar title='Games' back={false} />
-      <div className='grid2'>
-        <Link to='/play/chess' className='card tc' style={{ background: 'linear-gradient(160deg,#1d2b66,#3b1d6e)' }}>
-          <div style={{ fontSize: 56 }}>♞</div><h3>Chess</h3><span className='btn primary sm mt8'>Play Now</span>
-        </Link>
-        <Link to='/play/checkers' className='card tc' style={{ marginTop: 0, background: 'linear-gradient(160deg,#4a1d3d,#1d2b66)' }}>
-          <div style={{ fontSize: 56 }}>⛀</div><h3>Checkers</h3><span className='btn primary sm mt8'>Play Now</span>
-        </Link>
-        <Link to='/tournaments' className='card tc' style={{ marginTop: 0 }}>
-          <Trophy size={44} className='gold' /><h3 className='mt8'>Tournaments</h3><p className='tiny muted'>Compete and Win</p>
-        </Link>
-        <Link to='/live' className='card tc' style={{ marginTop: 0 }}>
-          <Video size={44} style={{ color: '#7fa6ff' }} /><h3 className='mt8'>Live Stream</h3><p className='tiny muted'>Watch and Chat</p>
-        </Link>
+      <div className='gc-head'>
+        <h1 style={{ fontSize: 22 }}>Games</h1>
+        <Link to='/wallet' className='token-pill'><Coin />{fmt(tokens)}<span className='plus'><Plus size={14} /></span></Link>
       </div>
-      <div className='section-title'><h3>Quick links</h3></div>
-      <div className='row wrap gap8'>
-        <Link to='/leaderboard' className='chip'>🏆 Leaderboard</Link>
-        <Link to='/friends' className='chip'>👥 Friends</Link>
-        <Link to='/community' className='chip'>🏘️ Communities</Link>
+
+      <Link to='/play/chess' className='gc-feature'>
+        <div>
+          <h2 style={{ fontSize: 22 }}>Kinggdom Chess</h2>
+          <p className='small muted mt8 mb12'>Outplay your opponent.</p>
+          <span className='btn primary sm'>Play Now</span>
+        </div>
+        <span className='glyph'>♞</span>
+      </Link>
+
+      <div className='section-title'><h3>Other Games</h3></div>
+      <div className='grid2'>
+        <Link to='/play/checkers' className='gc-mini'><div className='glyph'>⛀</div><b>Checkers</b><div className='tiny muted'>Play Now</div></Link>
+        <Link to='/live' className='gc-mini'><div className='glyph'><Video size={36} style={{ color: 'var(--blue)' }} /></div><b>Live Streams</b><div className='tiny muted'>Watch and chat</div></Link>
+      </div>
+
+      <div className='mt16'>
+        {rows.map((r) => (
+          <Link key={r.to} to={r.to} className='gc-row'>
+            <span className='ico'><r.icon size={20} /></span>
+            <div className='grow'><b>{r.title}</b><div className='tiny muted'>{r.sub}</div></div>
+            <ChevronRight size={18} className='chev' />
+          </Link>
+        ))}
       </div>
     </div>
   );
