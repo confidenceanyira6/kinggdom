@@ -1,0 +1,14 @@
+.brk{display:flex;gap:14px;overflow-x:auto;padding-bottom:8px}
+.brk-col{display:flex;flex-direction:column;justify-content:space-around;gap:10px;min-width:160px;flex:none}
+.brk-col h4{font-size:11px;color:var(--muted);text-align:center;margin:0 0 2px}
+.brk-m{border:1px solid var(--border);border-radius:12px;background:rgba(30,224,190,.06);overflow:hidden}
+.brk-m.live{border-color:var(--red)}
+.brk-m div{display:flex;justify-content:space-between;gap:8px;padding:7px 10px;font-size:12px}
+.brk-m div+div{border-top:1px solid var(--border)}
+.brk-m b.win{color:var(--emerald)}
+.brk-m .tbd{color:var(--muted)}
+.tbl-wrap{overflow-x:auto}
+.sched-row.mine{background:rgba(30,224,190,.07);border-radius:10px;padding-left:6px;padding-right:6px}
+.lobby{aspect-ratio:1/1;margin:0 4px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;border-radius:12px;background:rgba(255,255,255,.06);text-align:center;padding:16px}
+.stage.scroll{overflow-y:auto}
+@media (max-height:720px){.stage-cams{min-height:100px}.cam-tile{width:72px;height:96px}.cam-tile.big{width:80px;height:106px}}
