@@ -16,14 +16,14 @@ import { bestMove } from '../lib/chessAI';
 import { Countdown } from '../arena/ui';
 import { SpectatorBoard } from '../arena/BoardView';
 import { GAME_LABEL, freshBoard, levelFor, nextMatchFor, playerUser, sideName, standings, useArena, useBoards } from '../arena/store';
-import type { ArenaMatch, BoardState, EndReason } from '../arena/types';
+import type { ArenaMatch as MatchData, BoardState, EndReason } from '../arena/types';
 import '../styles/stream.css';
 import '../styles/arena.css';
 import '../styles/arena-pages.css';
 
 const ordinal = (n: number) => n + (n % 10 === 1 && n !== 11 ? 'st' : n % 10 === 2 && n !== 12 ? 'nd' : n % 10 === 3 && n !== 13 ? 'rd' : 'th');
 
-export default function ArenaMatch() {
+export default function ArenaMatchPage() {
   const { id = '' } = useParams();
   const nav = useNavigate();
   const me = useApp((s) => s.user)!;
@@ -43,12 +43,12 @@ export default function ArenaMatch() {
 
   const finish = (w: string | null, reason: EndReason = 'played') => useArena.getState().finishMatch(id, w, reason);
 
-  const commitChess = (g: Chess, from: string, to: string, cur: BoardState, m: ArenaMatch, mover: 'w' | 'b') => {
+  const commitChess = (g: Chess, from: string, to: string, cur: BoardState, m: MatchData, mover: 'w' | 'b') => {
     useBoards.getState().put(id, { ...cur, fen: g.fen(), lastSq: { from, to }, n: cur.n + 1, turn: g.turn() === 'w' ? 'r' : 'b' });
     if (g.isCheckmate()) finish(mover === 'w' ? m.a : m.b);
     else if (g.isDraw()) finish(null, 'draw');
   };
-  const commitChecker = (mv: CMove, cur: BoardState, m: ArenaMatch) => {
+  const commitChecker = (mv: CMove, cur: BoardState, m: MatchData) => {
     const r = applyMove(cur.board, mv);
     useBoards.getState().put(id, { ...cur, board: r.board, turn: r.next, cont: r.cont, n: cur.n + 1, last: { from: mv.from, to: mv.to } });
     const w = boardWinner(r.board, r.next, r.cont);
