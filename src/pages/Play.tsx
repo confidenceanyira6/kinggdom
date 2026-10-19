@@ -1,11 +1,12 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { BarChart3, ChevronRight, Gift, Plus, Trophy, Users, Video } from 'lucide-react';
+import { BarChart3, ChevronRight, Gift, Plus, Radio, Trophy, Users, Video } from 'lucide-react';
 import { api } from '../services/api';
 import { useApp } from '../store/useApp';
 import { Coin, fmt } from '../components/ui';
 
 const rows = [
+  { to: '/arena', icon: Radio, title: 'Arena', sub: 'Monthly leagues, championships and the official live stream' },
   { to: '/tournaments', icon: Trophy, title: 'Tournaments', sub: 'Win rewards' },
   { to: '/referral', icon: Gift, title: 'Rewards', sub: 'Invite friends and earn tokens' },
   { to: '/leaderboard', icon: BarChart3, title: 'Rankings', sub: 'See top players' },

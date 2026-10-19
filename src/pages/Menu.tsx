@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { BarChart3, Bell, ChevronRight, Coins, Edit3, Gift, HelpCircle, History, Settings as Cog, Shield, Trophy, Users, ArrowUpFromLine, Wallet as WalletIcon } from 'lucide-react';
+import { BarChart3, Bell, ChevronRight, Coins, Edit3, Gift, HelpCircle, History, Radio, Settings as Cog, Shield, Trophy, Users, ArrowUpFromLine, Wallet as WalletIcon } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Avatar, Button, Coin, TopBar, fmt } from '../components/ui';
 import { useApp } from '../store/useApp';
@@ -26,6 +26,7 @@ export default function Menu() {
     {
       title: 'Play and compete',
       rows: [
+        { to: '/arena', label: 'Arena (leagues and championships)', icon: Radio },
         { to: '/tournaments', label: 'Tournaments', icon: Trophy },
         { to: '/leaderboard', label: 'Leaderboard', icon: BarChart3 },
         { to: '/friends', label: 'Friends', icon: Users },
@@ -39,7 +40,7 @@ export default function Menu() {
         { to: '/notifications', label: 'Notifications', icon: Bell },
         { to: '/settings', label: 'Settings', icon: Cog },
         { to: '/settings#help', label: 'Help and Support', icon: HelpCircle },
-        ...(SHOW_ADMIN ? [{ to: '/admin', label: 'Admin Panel', icon: Shield }] : []),
+        ...(SHOW_ADMIN ? [{ to: '/admin/arena', label: 'Arena Admin', icon: Shield }, { to: '/admin', label: 'Admin Panel', icon: Shield }] : []),
       ],
     },
   ];

@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { RequireAuth, TabLayout, PlainLayout } from './components/AppLayout';
 import { Spinner } from './components/ui';
+import { ArenaRuntime } from './arena/ArenaRuntime';
 import { useSessionSync } from './hooks/useSessionSync';
 import { useApp } from './store/useApp';
 
@@ -40,6 +41,11 @@ const Leaderboard = lazy(() => import('./pages/Leaderboard'));
 const CreatePost = lazy(() => import('./pages/CreatePost'));
 const Referral = lazy(() => import('./pages/Referral'));
 const Admin = lazy(() => import('./pages/Admin'));
+const Arena = lazy(() => import('./pages/Arena'));
+const ArenaCompetition = lazy(() => import('./pages/ArenaCompetition'));
+const ArenaLive = lazy(() => import('./pages/ArenaLive'));
+const ArenaMatch = lazy(() => import('./pages/ArenaMatch'));
+const AdminArena = lazy(() => import('./pages/AdminArena'));
 
 function Toaster() {
   const msg = useApp((s) => s.toastMsg);
@@ -99,12 +105,18 @@ export default function App() {
               <Route path='/create-post' element={<CreatePost />} />
               <Route path='/referral' element={<Referral />} />
               <Route path='/admin' element={<Admin />} />
+              <Route path='/admin/arena' element={<AdminArena />} />
+              <Route path='/arena' element={<Arena />} />
+              <Route path='/arena/live' element={<ArenaLive />} />
+              <Route path='/arena/match/:id' element={<ArenaMatch />} />
+              <Route path='/arena/:compId' element={<ArenaCompetition />} />
             </Route>
           </Route>
 
           <Route path='*' element={<Navigate to='/' replace />} />
         </Routes>
       </Suspense>
+      <ArenaRuntime />
       <Toaster />
     </div>
   );
