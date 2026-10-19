@@ -1,21 +1,27 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { Chess } from 'chess.js';
 import { users } from '../data/mock';
-import type { User } from '../types';
+import type { GameType, User } from '../types';
 import { aiMove, applyMove, initialBoard } from '../lib/checkers';
 import type { Board, Side } from '../lib/checkers';
-import type { ArenaMatch, ArenaResult, ArenaState, BoardState, CompKind, Competition, EndReason, GiftRecord, NewComp, Prize, StandingRow } from './types';
+import { bestMove } from '../lib/chessAI';
+import type { ArenaMatch, ArenaResult, ArenaState, BoardState, CompKind, Competition, EndReason, GiftRecord, NewComp, Prize, SideName, StandingRow } from './types';
 
 /** Gifts are sent to this account (the admin / platform), never to the players. */
 export const OFFICIAL = 'KinggdomOfficial';
 /** How long a player has to accept a match invitation before they forfeit. */
 export const INVITE_MS = 90000;
 const MIN = 60000;
-const HUMAN_MATCH_MAX_MS = 15 * MIN;
+const HUMAN_MATCH_MAX_MS = 20 * MIN;
 const SEED_MAX_AGE_MS = 6 * 60 * MIN;
 
 const clone = <T>(x: T): T => JSON.parse(JSON.stringify(x)) as T;
 const hash = (s: string) => { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 9973; return h; };
+
+export const GAME_LABEL: Record<GameType, string> = { chess: 'Chess', checkers: 'Checkers' };
+/** Which colour each player has. First player: White (chess) or Red (checkers). */
+export const sideName = (game: GameType, slot: 'a' | 'b'): SideName => (slot === 'b' ? 'Black' : game === 'chess' ? 'White' : 'Red');
 
 // ---------- players ----------
 const mkUser = (username: string, rating: number): User => ({
@@ -29,10 +35,10 @@ export const registerUser = (u: User) => { registry.set(u.username, u); };
 export const playerUser = (username: string): User => registry.get(username) ?? mkUser(username, 1000);
 export const allPlayerNames = () => Array.from(registry.keys());
 const rating = (u: string | null) => (u ? playerUser(u).rating : 0);
-const levelFor = (u: string | null) => (rating(u) >= 1900 ? 3 : rating(u) >= 1500 ? 2 : 1);
+export const levelFor = (u: string | null) => (rating(u) >= 1900 ? 3 : rating(u) >= 1500 ? 2 : 1);
 
 // ---------- live boards (not persisted) ----------
-export const freshBoard = (): BoardState => ({ board: initialBoard(), turn: 'r', cont: null, n: 0, last: null });
+export const freshBoard = (): BoardState => ({ board: initialBoard(), turn: 'r', cont: null, n: 0, last: null, fen: new Chess().fen(), lastSq: null });
 interface BoardsStore { boards: Record<string, BoardState>; put: (id: string, b: BoardState) => void; reset: (id: string) => void }
 export const useBoards = create<BoardsStore>((set) => ({
   boards: {},
@@ -44,6 +50,14 @@ const byPieces = (b: Board, a: string | null, bl: string | null): string | null 
   const r = pieces(b, 'r'); const k = pieces(b, 'b');
   return r > k ? a : k > r ? bl : null;
 };
+const MAT: Record<string, number> = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
+const byMaterial = (fen: string, a: string | null, bl: string | null): string | null => {
+  let s = 0;
+  for (const row of new Chess(fen).board()) for (const p of row) if (p) s += (p.color === 'w' ? 1 : -1) * MAT[p.type];
+  return s >= 2 ? a : s <= -2 ? bl : null;
+};
+/** Winner of an unfinished game decided on material (used for demo safety nets). */
+const bySize = (game: GameType, bs: BoardState, a: string | null, b: string | null) => (game === 'chess' ? byMaterial(bs.fen, a, b) : byPieces(bs.board, a, b));
 
 // ---------- schedule builders ----------
 function roundRobin(players: string[]): [string, string][][] {
@@ -84,7 +98,7 @@ function prizesFor(kind: CompKind, pool: number): Prize[] {
   return split.map(([place, f]) => ({ place, tokens: Math.round(pool * f), to: null, paid: false }));
 }
 
-interface BuildArgs { id: string; name: string; kind: CompKind; players: string[]; prizePool: number; firstStart: number; gapMinutes: number }
+interface BuildArgs { id: string; name: string; game: GameType; kind: CompKind; players: string[]; prizePool: number; firstStart: number; gapMinutes: number }
 
 function buildComp(a: BuildArgs, now: number, past: boolean): Competition {
   const matches: ArenaMatch[] = [];
@@ -93,7 +107,7 @@ function buildComp(a: BuildArgs, now: number, past: boolean): Competition {
       pairs.forEach(([x, y], k) => {
         const startsAt = a.firstStart + r * a.gapMinutes * MIN;
         const m: ArenaMatch = { id: a.id + '-m' + r + '-' + k, compId: a.id, round: 'Matchday ' + (r + 1), a: x, b: y, startsAt, status: 'scheduled', accepted: { a: false, b: false } };
-        if (past && startsAt < now - 60000) { m.status = 'finished'; m.accepted = { a: true, b: true }; m.result = fakeResult(x, y, r * 7 + k); }
+        if (past && startsAt < now - 30000) { m.status = 'finished'; m.accepted = { a: true, b: true }; m.result = fakeResult(x, y, r * 7 + k); }
         matches.push(m);
       });
     });
@@ -123,7 +137,7 @@ function buildComp(a: BuildArgs, now: number, past: boolean): Competition {
     }));
   }
   return {
-    id: a.id, name: a.name, kind: a.kind, status: matches.some((m) => m.status === 'finished') ? 'live' : 'upcoming',
+    id: a.id, name: a.name, game: a.game, kind: a.kind, status: matches.some((m) => m.status === 'finished') ? 'live' : 'upcoming',
     players: a.players, prizePool: a.prizePool, prizes: prizesFor(a.kind, a.prizePool), matches, gapMinutes: a.gapMinutes, createdAt: now,
   };
 }
@@ -155,10 +169,10 @@ export function standings(c: Competition): StandingRow[] {
     .sort((x, y) => y.pts - x.pts || y.w - x.w || rating(y.user) - rating(x.user));
 }
 
-type Ref = { comp: Competition; match: ArenaMatch };
+export type MatchRef = { comp: Competition; match: ArenaMatch };
 
-export function nextMatchFor(comps: Competition[], user: string): Ref | null {
-  let best: Ref | null = null; let bestRank = 9; let bestT = Infinity;
+export function nextMatchFor(comps: Competition[], user: string): MatchRef | null {
+  let best: MatchRef | null = null; let bestRank = 9; let bestT = Infinity;
   for (const comp of comps) {
     for (const match of comp.matches) {
       if (match.status === 'finished' || (match.a !== user && match.b !== user)) continue;
@@ -170,9 +184,9 @@ export function nextMatchFor(comps: Competition[], user: string): Ref | null {
   return best;
 }
 
-export function pickFeatured(comps: Competition[], official: { featuredMatchId: string | null }): Ref | null {
-  const all: Ref[] = comps.flatMap((comp) => comp.matches.map((match) => ({ comp, match })));
-  const ready = (x: Ref) => !!x.match.a && !!x.match.b;
+export function pickFeatured(comps: Competition[], official: { featuredMatchId: string | null }): MatchRef | null {
+  const all: MatchRef[] = comps.flatMap((comp) => comp.matches.map((match) => ({ comp, match })));
+  const ready = (x: MatchRef) => !!x.match.a && !!x.match.b;
   const pinned = official.featuredMatchId ? all.find((x) => x.match.id === official.featuredMatchId && x.match.status !== 'finished' && ready(x)) : undefined;
   if (pinned) return pinned;
   const ordered = [...all].sort((x, y) => (x.comp.kind === 'championship' ? 0 : 1) - (y.comp.kind === 'championship' ? 0 : 1));
@@ -235,7 +249,7 @@ function seedGifts(now: number): GiftRecord[] {
     ['RookBoss', 'King', '🤴', 1000], ['ChessPro', 'Whale', '🐋', 50], ['NightKnight', 'Diamond', '💎', 500], ['DiscoDama', 'Rocket', '🚀', 200],
   ];
   const out: GiftRecord[] = [];
-  for (let i = 0; i < 24; i++) {
+  for (let i = 0; i < 40; i++) {
     const [from, name, emoji, tokens] = base[i % base.length];
     out.push({ id: 'sg' + i, from, name, emoji, tokens: tokens * (1 + (i % 3)), at: now - i * 17 * MIN });
   }
@@ -246,16 +260,16 @@ function seed(me: User, now: number): ArenaState {
   registerUser(me);
   const pool = ['QueenBee', 'KingMaster23', 'SilentMove', 'LadyTactics', 'RookBoss', 'ChessPro', 'NightKnight', 'DiscoDama'].filter((n) => n !== me.username);
   const month = new Date(now).toLocaleString('en-US', { month: 'long' });
-  const gap = 4;
-  const league = buildComp({
-    id: 'cmp-league', name: month + ' Checkers League', kind: 'monthly', players: [me.username, ...pool.slice(0, 5)], prizePool: 4000,
-    firstStart: now + 90000 - 2 * gap * MIN, gapMinutes: gap,
-  }, now, true);
-  const champ = buildComp({
-    id: 'cmp-champ', name: 'Kinggdom Championship', kind: 'championship', players: [me.username, ...pool.slice(0, 7)], prizePool: 10000,
-    firstStart: now + 8 * MIN, gapMinutes: 3,
-  }, now, false);
-  return { ...emptyState(), seededFor: me.username, seededAt: now, comps: [champ, league], gifts: seedGifts(now), official: { live: true, title: 'Kinggdom Official Arena', featuredMatchId: null, startedAt: now } };
+  const six = [me.username, ...pool.slice(0, 5)];
+  const eight = [me.username, ...pool.slice(0, 7)];
+  const comps = [
+    // Timeline for the demo: invitations arrive at about +1.5, +5, +9 and +13 minutes.
+    buildComp({ id: 'cmp-chk-league', name: month + ' Checkers League', game: 'checkers', kind: 'monthly', players: six, prizePool: 3000, firstStart: now + 90000 - 2 * 4 * MIN, gapMinutes: 4 }, now, true),
+    buildComp({ id: 'cmp-chs-league', name: month + ' Chess League', game: 'chess', kind: 'monthly', players: six.slice().reverse(), prizePool: 3000, firstStart: now + 5 * MIN - 2 * 6 * MIN, gapMinutes: 6 }, now, true),
+    buildComp({ id: 'cmp-chs-champ', name: 'Kinggdom Chess Championship', game: 'chess', kind: 'championship', players: eight, prizePool: 8000, firstStart: now + 9 * MIN, gapMinutes: 3 }, now, false),
+    buildComp({ id: 'cmp-chk-champ', name: 'Kinggdom Checkers Championship', game: 'checkers', kind: 'championship', players: eight, prizePool: 6000, firstStart: now + 13 * MIN, gapMinutes: 3 }, now, false),
+  ];
+  return { ...emptyState(), seededFor: me.username, seededAt: now, comps, gifts: seedGifts(now), official: { live: true, title: 'Kinggdom Official Arena', featuredMatchId: null, startedAt: now } };
 }
 
 interface ArenaStore extends ArenaState {
@@ -322,19 +336,36 @@ export const useArena = create<ArenaStore>()(
               const bs = clone(boards.boards[m.id] ?? freshBoard());
               if (human) {
                 // A real player drives this board from the match screen. Safety net if they walk away.
-                if (m.liveSince && now - m.liveSince > HUMAN_MATCH_MAX_MS) finishes.push({ id: m.id, w: byPieces(bs.board, m.a, m.b), reason: 'played' });
-              } else {
-                // Demo engine: plays the other matches so standings and brackets update on their own.
-                for (let k = 0; k < 2; k++) {
-                  const player = bs.turn === 'r' ? m.a : m.b;
-                  const mv = aiMove(bs.board, bs.turn, bs.cont, levelFor(player));
+                if (m.liveSince && now - m.liveSince > HUMAN_MATCH_MAX_MS) {
+                  const w = bySize(c.game, bs, m.a, m.b);
+                  finishes.push({ id: m.id, w, reason: w ? 'played' : 'draw' });
+                }
+                continue;
+              }
+              // Demo engine: plays the other matches so standings and brackets update on their own.
+              for (let k = 0; k < 2; k++) {
+                if (c.game === 'chess') {
+                  const g = new Chess(bs.fen);
+                  const mv = bestMove(g, levelFor(g.turn() === 'w' ? m.a : m.b));
+                  if (!mv) {
+                    if (g.isCheckmate()) finishes.push({ id: m.id, w: g.turn() === 'w' ? m.b : m.a, reason: 'played' });
+                    else finishes.push({ id: m.id, w: null, reason: 'draw' });
+                    break;
+                  }
+                  const r = g.move(mv);
+                  bs.fen = g.fen(); bs.lastSq = { from: r.from, to: r.to }; bs.n += 1; bs.turn = g.turn() === 'w' ? 'r' : 'b';
+                  if (g.isCheckmate()) { finishes.push({ id: m.id, w: r.color === 'w' ? m.a : m.b, reason: 'played' }); break; }
+                  if (g.isDraw()) { finishes.push({ id: m.id, w: null, reason: 'draw' }); break; }
+                  if (bs.n >= 140) { const w = byMaterial(bs.fen, m.a, m.b); finishes.push({ id: m.id, w, reason: w ? 'played' : 'draw' }); break; }
+                } else {
+                  const mv = aiMove(bs.board, bs.turn, bs.cont, levelFor(bs.turn === 'r' ? m.a : m.b));
                   if (!mv) { finishes.push({ id: m.id, w: bs.turn === 'r' ? m.b : m.a, reason: 'played' }); break; }
                   const r = applyMove(bs.board, mv);
                   bs.board = r.board; bs.turn = r.next; bs.cont = r.cont; bs.n += 1; bs.last = { from: mv.from, to: mv.to };
-                  if (bs.n >= 110) { finishes.push({ id: m.id, w: byPieces(bs.board, m.a, m.b), reason: 'played' }); break; }
+                  if (bs.n >= 110) { const w = byPieces(bs.board, m.a, m.b); finishes.push({ id: m.id, w, reason: w ? 'played' : 'draw' }); break; }
                 }
-                boards.put(m.id, bs);
               }
+              boards.put(m.id, bs);
             }
           }
         }
@@ -387,7 +418,7 @@ export const useArena = create<ArenaStore>()(
       createCompetition: (i) => {
         const now = Date.now();
         const id = 'cmp-' + now.toString(36);
-        const comp = buildComp({ id, name: i.name, kind: i.kind, players: i.players, prizePool: i.prizePool, firstStart: now + i.firstStartMinutes * MIN, gapMinutes: i.gapMinutes }, now, false);
+        const comp = buildComp({ id, name: i.name, game: i.game, kind: i.kind, players: i.players, prizePool: i.prizePool, firstStart: now + i.firstStartMinutes * MIN, gapMinutes: i.gapMinutes }, now, false);
         set((s) => ({ comps: [comp, ...s.comps] }));
         return id;
       },
@@ -411,7 +442,7 @@ export const useArena = create<ArenaStore>()(
       },
     }),
     {
-      name: 'kinggdom-arena-v1',
+      name: 'kinggdom-arena-v2',
       partialize: (s) => ({ seededFor: s.seededFor, seededAt: s.seededAt, comps: s.comps, gifts: s.gifts, fundPaidOut: s.fundPaidOut, official: s.official }),
     }
   )

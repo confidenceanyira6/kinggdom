@@ -1,8 +1,10 @@
 import type { Board, Pos, Side } from '../lib/checkers';
+import type { GameType } from '../types';
 
 export type CompKind = 'monthly' | 'championship';
 export type MatchStatus = 'scheduled' | 'invited' | 'live' | 'finished';
 export type EndReason = 'played' | 'forfeit' | 'draw' | 'no-show';
+export type SideName = 'White' | 'Black' | 'Red';
 
 export interface ArenaResult { winner: string | null; reason: EndReason }
 
@@ -10,9 +12,9 @@ export interface ArenaMatch {
   id: string;
   compId: string;
   round: string;
-  /** Red, moves first. null = not decided yet (knockout bracket). */
+  /** First player (White in chess, Red in checkers). null = not decided yet (knockout bracket). */
   a: string | null;
-  /** Black. */
+  /** Second player (Black). */
   b: string | null;
   /** Epoch ms. null until both players are known. */
   startsAt: number | null;
@@ -31,6 +33,7 @@ export interface Prize { place: string; tokens: number; to: string | null; paid:
 export interface Competition {
   id: string;
   name: string;
+  game: GameType;
   kind: CompKind;
   status: 'upcoming' | 'live' | 'completed';
   players: string[];
@@ -54,8 +57,17 @@ export interface ArenaState {
   official: OfficialStream;
 }
 
-export interface BoardState { board: Board; turn: Side; cont: Pos | null; n: number; last: { from: Pos; to: Pos } | null }
+/** Live position of one match. Checkers uses board/turn/cont/last; chess uses fen/lastSq. */
+export interface BoardState {
+  board: Board;
+  turn: Side;
+  cont: Pos | null;
+  n: number;
+  last: { from: Pos; to: Pos } | null;
+  fen: string;
+  lastSq: { from: string; to: string } | null;
+}
 
 export interface StandingRow { user: string; p: number; w: number; d: number; l: number; pts: number; form: ('W' | 'D' | 'L')[]; live: boolean }
 
-export interface NewComp { name: string; kind: CompKind; players: string[]; prizePool: number; firstStartMinutes: number; gapMinutes: number }
+export interface NewComp { name: string; game: GameType; kind: CompKind; players: string[]; prizePool: number; firstStartMinutes: number; gapMinutes: number }

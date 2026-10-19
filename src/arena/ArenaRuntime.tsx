@@ -4,7 +4,7 @@ import { Check, Flag } from 'lucide-react';
 import { useApp } from '../store/useApp';
 import { Avatar, Button } from '../components/ui';
 import { Countdown } from './ui';
-import { playerUser, useArena } from './store';
+import { GAME_LABEL, playerUser, sideName, useArena } from './store';
 import '../styles/arena.css';
 
 /**
@@ -41,9 +41,11 @@ export function ArenaRuntime() {
   if (!username || !invite) return null;
   if (loc.pathname === '/' || loc.pathname === '/login' || loc.pathname === '/signup') return null;
   const { c, m } = invite;
-  const oppName = m.a === username ? m.b : m.a;
+  const mySlot: 'a' | 'b' = m.a === username ? 'a' : 'b';
+  const oppName = mySlot === 'a' ? m.b : m.a;
   const opp = oppName ? playerUser(oppName) : null;
-  const mySide = m.a === username ? 'Red' : 'Black';
+  const mine = sideName(c.game, mySlot);
+  const theirs = sideName(c.game, mySlot === 'a' ? 'b' : 'a');
 
   const accept = () => {
     useArena.getState().accept(m.id, username);
@@ -57,13 +59,13 @@ export function ArenaRuntime() {
   return (
     <div className='invite-back'>
       <div className='invite'>
-        <div className='tiny gold bold'>MATCH INVITATION</div>
+        <div className='tiny gold bold'>MATCH INVITATION · {GAME_LABEL[c.game].toUpperCase()}</div>
         <h2 style={{ margin: '6px 0 2px' }}>Your match is starting!</h2>
         <p className='small muted'>{c.name} · {m.round}</p>
         <div className='row center gap16 mt16'>
-          <div className='col center gap4'><Avatar name={username} size={56} ring /><b className='small'>You</b><span className={'side-chip ' + mySide.toLowerCase()}><i />{mySide}</span></div>
+          <div className='col center gap4'><Avatar name={username} size={56} ring /><b className='small'>You</b><span className={'side-chip ' + mine.toLowerCase()}><i />{mine}</span></div>
           <b className='gold' style={{ fontSize: 20 }}>VS</b>
-          <div className='col center gap4'><Avatar name={opp ? opp.name : '?'} size={56} /><b className='small'>{oppName ?? 'TBD'}</b><span className={'side-chip ' + (mySide === 'Red' ? 'black' : 'red')}><i />{mySide === 'Red' ? 'Black' : 'Red'}</span></div>
+          <div className='col center gap4'><Avatar name={opp ? opp.name : '?'} size={56} /><b className='small'>{oppName ?? 'TBD'}</b><span className={'side-chip ' + theirs.toLowerCase()}><i />{theirs}</span></div>
         </div>
         <p className='small mt16'>Respond in <b className='gold'><Countdown to={m.inviteExpiresAt ?? null} /></b> or you forfeit.</p>
         <div className='grid2 mt16'>
