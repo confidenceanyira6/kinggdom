@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
-import { Avatar, Button, Toggle, TopBar } from '../components/ui';
+import { Avatar, Button, Field, Sheet, Toggle, TopBar } from '../components/ui';
 import { useApp } from '../store/useApp';
 import { api } from '../services/api';
+import { profileApi } from '../services/profileApi';
 import { useLocalSetting } from '../hooks/useLocalSetting';
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
@@ -19,8 +21,29 @@ export default function Settings() {
   const [twofa, setTwofa] = useLocalSetting('2fa', false);
   const [priv, setPriv] = useLocalSetting('private', false);
   const [lang, setLang] = useLocalSetting('lang', 'English');
+  const [sheet, setSheet] = useState<'password' | 'email' | null>(null);
+  const [pw, setPw] = useState('');
+  const [pw2, setPw2] = useState('');
+  const [email, setEmail] = useState('');
+  const [busy, setBusy] = useState(false);
 
   const logout = async () => { await api.auth.logOut(); signOut(); nav('/login', { replace: true }); };
+
+  const close = () => { setSheet(null); setPw(''); setPw2(''); setEmail(''); };
+
+  const submitPassword = async () => {
+    if (pw.length < 8) { toast('Password must be at least 8 characters'); return; }
+    if (pw !== pw2) { toast('Passwords do not match'); return; }
+    setBusy(true);
+    try { await profileApi.changePassword(pw); toast('Password changed'); close(); } catch (e) { toast((e as Error).message); } finally { setBusy(false); }
+  };
+
+  const submitEmail = async () => {
+    const v = email.trim();
+    if (!v.includes('@') || !v.includes('.')) { toast('Enter a valid email address'); return; }
+    setBusy(true);
+    try { await profileApi.changeEmail(v); toast('Check your new email to confirm the change'); close(); } catch (e) { toast((e as Error).message); } finally { setBusy(false); }
+  };
 
   return (
     <div className='screen nonav'>
@@ -29,9 +52,10 @@ export default function Settings() {
 
       <div className='section-title'><h3>Account and Security</h3></div>
       <div className='card'>
+        <Row label='Change email'><button className='link small' onClick={() => setSheet('email')}>Change</button></Row>
+        <Row label='Change password'><button className='link small' onClick={() => setSheet('password')}>Change</button></Row>
         <Row label='Two-factor authentication'><Toggle checked={twofa} onChange={(v) => { setTwofa(v); toast(v ? '2FA enabled once backend is connected' : '2FA disabled'); }} /></Row>
         <Row label='Private profile'><Toggle checked={priv} onChange={setPriv} /></Row>
-        <Row label='Change password'><button className='link small' onClick={() => toast('Available when the backend is connected')}>Change</button></Row>
       </div>
 
       <div className='section-title'><h3>Notifications</h3></div>
@@ -62,6 +86,18 @@ export default function Settings() {
         <Row label='About Kinggdom'><span className='muted small'>v0.1.0</span></Row>
       </div>
       <Button variant='danger' full className='mt16' onClick={logout}>Log Out</Button>
+
+      <Sheet open={sheet === 'password'} onClose={close} title='Change password'>
+        <Field label='New password' type='password' value={pw} onChange={(e) => setPw(e.target.value)} autoComplete='new-password' />
+        <Field label='Confirm new password' type='password' value={pw2} onChange={(e) => setPw2(e.target.value)} autoComplete='new-password' />
+        <Button full loading={busy} onClick={submitPassword}>Update password</Button>
+      </Sheet>
+
+      <Sheet open={sheet === 'email'} onClose={close} title='Change email'>
+        <Field label='New email address' type='email' value={email} onChange={(e) => setEmail(e.target.value)} autoComplete='email' />
+        <p className='tiny muted mb12'>We will send a confirmation link to the new address.</p>
+        <Button full loading={busy} onClick={submitEmail}>Update email</Button>
+      </Sheet>
     </div>
   );
 }

@@ -1,11 +1,15 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, ArrowUpFromLine, Coins, Gift, Menu as MenuIcon, Settings as Cog, Share2 } from 'lucide-react';
+import { ArrowLeft, ArrowUpFromLine, Coins, Flag, Gift, Menu as MenuIcon, Plus, Settings as Cog, Share2 } from 'lucide-react';
 import { api } from '../services/api';
+import { profileApi } from '../services/profileApi';
+import type { MiniUser } from '../services/profileApi';
+import type { Post } from '../types';
 import { useApp } from '../store/useApp';
 import { useAsync } from '../hooks/useAsync';
-import { Avatar, Button, Coin, Empty, Loading, Tabs, TopBar, fmt } from '../components/ui';
+import { Avatar, Button, Coin, Empty, Loading, Sheet, Tabs, TopBar, fmt } from '../components/ui';
 import { MenuList } from '../components/MenuList';
+import { PostCard } from '../components/PostCard';
 import '../styles/profile.css';
 
 const BADGE: Record<string, string> = { crown: '👑', star: '⭐', trophy: '🏆', fire: '🔥' };
@@ -30,9 +34,13 @@ export default function Profile() {
   const target = username ?? me.username;
   const isMe = target.toLowerCase() === me.username.toLowerCase();
   const { data: u, loading, setData } = useAsync(() => api.users.get(target), [target]);
-  const feed = useAsync(() => api.feed.list());
+  const posts = useAsync(() => (u ? profileApi.postsBy(u) : Promise.resolve([] as Post[])), [u?.id]);
+  const avatar = useAsync(() => (u ? profileApi.avatarOf(u.id) : Promise.resolve(null as string | null)), [u?.id]);
+  const [list, setList] = useState<'followers' | 'following' | null>(null);
+  const conns = useAsync(() => (u && list ? profileApi.connections(u.id, list) : Promise.resolve([] as MiniUser[])), [u?.id, list]);
   const wallet = useAsync(() => api.wallet.get());
   const [tab, setTab] = useState<Tab>(isMe && sp.get('tab') === 'menu' ? 'menu' : 'posts');
+  const [openPost, setOpenPost] = useState<string | null>(null);
 
   if (loading) return <div className='screen'><Loading /></div>;
   if (!u) return <div className='screen'><TopBar title='Profile' back={!!username} /><Empty text='Player not found' /></div>;
@@ -48,13 +56,19 @@ export default function Profile() {
       else { await navigator.clipboard.writeText(url); toast('Profile link copied'); }
     } catch { /* cancelled */ }
   };
+  const reportUser = async () => {
+    if (!window.confirm('Report @' + u.username + '?')) return;
+    try { await profileApi.reportUser(u.id, 'user_report'); toast('Thanks, we will review it'); } catch (e) { toast((e as Error).message); }
+  };
   const openMenu = () => {
     setTab('menu');
     setTimeout(() => document.getElementById('pf-tabs')?.scrollIntoView({ behavior: 'smooth' }), 50);
   };
 
   const winRate = u.games ? Math.round((u.wins / u.games) * 100) : 0;
-  const posts = (feed.data ?? []).filter((p) => p.author.username === u.username);
+  const postList = posts.data ?? [];
+  const current = postList.find((p) => p.id === openPost);
+  const connList = conns.data ?? [];
   const history = [
     { t: 'Won vs QueenBee', s: 'Chess · Rapid', r: 'W' },
     { t: 'Lost vs SilentMove', s: 'Checkers · Blitz', r: 'L' },
@@ -80,17 +94,19 @@ export default function Profile() {
       <div className='pf-cover'>
         <div className='pf-cover-top'>
           {username ? <button className='icon-btn' onClick={() => nav(-1)} aria-label='Back'><ArrowLeft size={20} /></button> : <span />}
-          {isMe && (
+          {isMe ? (
             <div className='row gap8'>
               <button className='icon-btn' onClick={openMenu} aria-label='Menu'><MenuIcon size={18} /></button>
               <Link to='/settings' className='icon-btn' aria-label='Settings'><Cog size={18} /></Link>
             </div>
+          ) : (
+            <button className='icon-btn' onClick={reportUser} aria-label='Report user'><Flag size={18} /></button>
           )}
         </div>
       </div>
 
       <div className='pf-head'>
-        <Avatar name={u.name} size={96} ring online={u.online} />
+        <Avatar name={u.name} src={avatar.data} size={96} ring online={u.online} />
         <h2>{u.name}</h2>
         <div className='muted small'>@{u.username}</div>
         <div className='pf-chips'>
@@ -99,13 +115,13 @@ export default function Profile() {
           {u.country && <span className='pill' style={{ background: 'rgba(255,255,255,.08)' }}>{u.country}</span>}
           {u.premium && <span className='pill' style={{ color: 'var(--gold)', background: 'rgba(245,196,81,.15)' }}>Prime Member</span>}
         </div>
-        <p className='muted small' style={{ maxWidth: 300 }}>{u.bio || 'No bio yet.'}</p>
+        <p className='muted small' style={{ maxWidth: 300 }}>{u.bio || (isMe ? 'Add a bio in Edit Profile.' : 'No bio yet.')}</p>
         <div className='row gap8'>{u.badges.map((b) => <span key={b} style={{ fontSize: 20 }}>{BADGE[b] ?? '🏅'}</span>)}</div>
       </div>
 
       <div className='card pf-stats mt16'>
-        <div><b>{fmt(u.followers)}</b><span className='tiny muted'>Followers</span></div>
-        <div><b>{fmt(u.following)}</b><span className='tiny muted'>Following</span></div>
+        <div role='button' style={{ cursor: 'pointer' }} onClick={() => setList('followers')}><b>{fmt(u.followers)}</b><span className='tiny muted'>Followers</span></div>
+        <div role='button' style={{ cursor: 'pointer' }} onClick={() => setList('following')}><b>{fmt(u.following)}</b><span className='tiny muted'>Following</span></div>
         <div><b>{fmt(u.games)}</b><span className='tiny muted'>Games</span></div>
         <div><b className='gold'>{winRate}%</b><span className='tiny muted'>Win rate</span></div>
       </div>
@@ -137,11 +153,20 @@ export default function Profile() {
       <div id='pf-tabs'><Tabs<Tab> tabs={tabs} value={tab} onChange={setTab} /></div>
 
       {tab === 'posts' && (
-        posts.length === 0 ? <Empty text='No posts yet' /> : (
-          <div className='pgrid'>
-            {posts.map((p) => <div key={p.id} className='p-tile' style={{ background: grad(p.id) }}>{POST_EMOJI[p.kind] ?? '💬'}<span>♥ {fmt(p.likes)}</span></div>)}
-          </div>
-        )
+        <>
+          {isMe && <Button full className='mb12' onClick={() => nav('/create-post')}><Plus size={16} /> New post</Button>}
+          {posts.loading ? <Loading /> : postList.length === 0 ? <Empty text={isMe ? 'You have not posted yet. Share your first move!' : 'No posts yet'} /> : (
+            <div className='pgrid'>
+              {postList.map((p) => (
+                <div key={p.id} role='button' className='p-tile' style={{ background: grad(p.id), cursor: 'pointer' }} onClick={() => setOpenPost(p.id)}>
+                  {POST_EMOJI[p.kind] ?? '💬'}
+                  <em style={{ fontStyle: 'normal', fontSize: 11, opacity: 0.9, padding: '0 6px', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{p.text}</em>
+                  <span>♥ {fmt(p.likes)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       {tab === 'games' && (
@@ -201,6 +226,26 @@ export default function Profile() {
       )}
 
       {tab === 'menu' && isMe && <MenuList />}
+
+      <Sheet open={!!current} onClose={() => setOpenPost(null)} title='Post'>
+        {current && (
+          <PostCard
+            key={current.id}
+            post={current}
+            onDeleted={(id) => { posts.setData(postList.filter((p) => p.id !== id)); setOpenPost(null); }}
+            onEdited={(id, text) => posts.setData(postList.map((p) => (p.id === id ? { ...p, text } : p)))}
+          />
+        )}
+      </Sheet>
+
+      <Sheet open={!!list} onClose={() => setList(null)} title={list === 'following' ? 'Following' : 'Followers'}>
+        {conns.loading ? <Loading /> : connList.length === 0 ? <Empty text='Nobody here yet' /> : connList.map((c) => (
+          <div key={c.id} className='list-row' role='button' style={{ cursor: 'pointer' }} onClick={() => { setList(null); nav('/u/' + c.username); }}>
+            <Avatar name={c.name} src={c.avatarUrl} size={36} />
+            <div className='grow'><b className='small'>{c.name}</b><div className='tiny muted'>@{c.username}</div></div>
+          </div>
+        ))}
+      </Sheet>
     </div>
   );
 }
