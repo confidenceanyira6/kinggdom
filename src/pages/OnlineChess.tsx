@@ -4,8 +4,10 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Chess } from 'chess.js';
 import { ChessBoard } from '../components/ChessBoard';
 import type { ChessMove } from '../components/ChessBoard';
+import { ConfirmSheet } from '../components/ConfirmSheet';
 import { Avatar, Button, Sheet, Spinner, TopBar } from '../components/ui';
 import { supabase, callFunction } from '../lib/supabase';
+import { goBack } from '../lib/nav';
 import { api } from '../services/api';
 import { useApp } from '../store/useApp';
 
@@ -52,6 +54,7 @@ export default function OnlineChess() {
   const [sp] = useSearchParams();
   const urlId = sp.get('id');
   const setTokens = useApp((s) => s.setTokens);
+  const toast = useApp((s) => s.toast);
   const [gameId, setGameId] = useState<string | null>(urlId);
   const [g, setG] = useState<Row | null>(null);
   const [fen, setFen] = useState(new Chess().fen());
@@ -60,6 +63,8 @@ export default function OnlineChess() {
   const [me, setMe] = useState('');
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
+  const [confirm, setConfirm] = useState<'resign' | 'abort' | null>(null);
+  const [ending, setEnding] = useState(false);
   const found = useRef(!!urlId);
   const rewarded = useRef(false);
 
@@ -162,10 +167,27 @@ export default function OnlineChess() {
     return true;
   };
 
-  const act = async (fn: string, args: Record<string, unknown>) => {
+  const act = async (fn: string, args: Record<string, unknown>): Promise<boolean> => {
     setErr('');
     const r = await supabase.rpc(fn, args);
-    if (r.error) setErr(r.error.message); else if (gameId) await load(gameId).catch(() => undefined);
+    if (r.error) { setErr(r.error.message); toast(r.error.message); return false; }
+    if (gameId) await load(gameId).catch(() => undefined);
+    return true;
+  };
+
+  // Resign / abort: confirm in-app (window.confirm is blocked on many phones), then leave the match
+  // and return to the page the player was on before it started.
+  const confirmEnd = async () => {
+    if (!g || !confirm) return;
+    const kind = confirm;
+    setEnding(true);
+    const done = await act(kind === 'resign' ? 'resign_game' : 'abort_game', { p_game: g.id });
+    setEnding(false);
+    setConfirm(null);
+    if (!done) return;
+    toast(kind === 'resign' ? 'You resigned the match' : 'Match aborted');
+    api.wallet.get().then((w) => setTokens(w.tokens)).catch(() => undefined);
+    goBack(nav);
   };
 
   if (err && !g) return <div className='screen nonav'><TopBar title='Online Chess' /><div className='col center gap12' style={{ minHeight: '50vh' }}><p className='red'>{err}</p><Button onClick={() => nav('/play')}>Back</Button></div></div>;
@@ -198,22 +220,34 @@ export default function OnlineChess() {
       {g.status === 'active' && mySide && (
         <div className='grid2 mt8'>
           {g.move_count < 2
-            ? <Button variant='ghost' onClick={() => act('abort_game', { p_game: g.id })}>Abort</Button>
-            : <Button variant='danger' onClick={() => act('resign_game', { p_game: g.id })}>Resign</Button>}
+            ? <Button variant='ghost' onClick={() => setConfirm('abort')}>Abort</Button>
+            : <Button variant='danger' onClick={() => setConfirm('resign')}>Resign</Button>}
           {drawFromOpp
             ? <Button onClick={() => act('respond_draw', { p_game: g.id, p_accept: true })}>Accept draw</Button>
             : <Button variant='ghost' onClick={() => act('offer_draw', { p_game: g.id })}>{g.draw_offered_by === mySideWord ? 'Draw offered' : 'Offer draw'}</Button>}
         </div>
       )}
       {drawFromOpp && g.status === 'active' && <Button variant='ghost' full onClick={() => act('respond_draw', { p_game: g.id, p_accept: false })}>Decline draw</Button>}
-      <Sheet open={!!ended} onClose={() => undefined} title={outcome}>
+
+      <ConfirmSheet
+        open={confirm !== null}
+        title={confirm === 'abort' ? 'Abort this match?' : 'Resign this match?'}
+        message={confirm === 'abort' ? 'The game will be cancelled with no rating change.' : 'If you resign, you will lose this match.'}
+        confirmLabel='OK'
+        danger
+        busy={ending}
+        onCancel={() => setConfirm(null)}
+        onConfirm={confirmEnd}
+      />
+
+      <Sheet open={!!ended && confirm === null} onClose={() => undefined} title={outcome}>
         {reason && <p className='muted mb12' style={{ textTransform: 'capitalize' }}>{reason}</p>}
         {g.rated && g.status === 'finished' && mySide && (
           <p className='gold bold mb12'>Rating {(mySide === 'w' ? g.white_rating_change : g.black_rating_change) >= 0 ? '+' : ''}{(mySide === 'w' ? g.white_rating_change : g.black_rating_change) ?? 0}</p>
         )}
         <div className='grid2'>
           <Button onClick={() => { window.location.href = '/game/chess?mode=online'; }}>Play again</Button>
-          <Button variant='ghost' onClick={() => nav('/play')}>Exit</Button>
+          <Button variant='ghost' onClick={() => goBack(nav, '/play')}>Exit</Button>
         </div>
       </Sheet>
     </div>
