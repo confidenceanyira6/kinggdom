@@ -6,6 +6,7 @@ import { ChessBoard } from '../components/ChessBoard';
 import type { ChessMove } from '../components/ChessBoard';
 import { Avatar, Button, Sheet, Spinner, TopBar } from '../components/ui';
 import { supabase, callFunction } from '../lib/supabase';
+import { FORFEIT_MSG, leaveMatch } from '../lib/leaveMatch';
 import { api } from '../services/api';
 import { useApp } from '../store/useApp';
 
@@ -52,6 +53,7 @@ export default function OnlineChess() {
   const [sp] = useSearchParams();
   const urlId = sp.get('id');
   const setTokens = useApp((s) => s.setTokens);
+  const toast = useApp((s) => s.toast);
   const [gameId, setGameId] = useState<string | null>(urlId);
   const [g, setG] = useState<Row | null>(null);
   const [fen, setFen] = useState(new Chess().fen());
@@ -60,6 +62,7 @@ export default function OnlineChess() {
   const [me, setMe] = useState('');
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
+  const [leaving, setLeaving] = useState(false);
   const found = useRef(!!urlId);
   const rewarded = useRef(false);
 
@@ -168,6 +171,23 @@ export default function OnlineChess() {
     if (r.error) setErr(r.error.message); else if (gameId) await load(gameId).catch(() => undefined);
   };
 
+  // Forfeit: ask first, then resign on the server, then go back to where the player came from.
+  const forfeit = async () => {
+    if (!g || leaving) return;
+    if (!window.confirm(FORFEIT_MSG)) return;
+    setLeaving(true);
+    setErr('');
+    const r = await supabase.rpc('resign_game', { p_game: g.id });
+    if (r.error) {
+      setLeaving(false);
+      setErr(r.error.message);
+      toast('Could not forfeit: ' + r.error.message);
+      return;
+    }
+    toast('You forfeited the match');
+    leaveMatch(nav);
+  };
+
   if (err && !g) return <div className='screen nonav'><TopBar title='Online Chess' /><div className='col center gap12' style={{ minHeight: '50vh' }}><p className='red'>{err}</p><Button onClick={() => nav('/play')}>Back</Button></div></div>;
   if (!g) return (
     <div className='screen nonav'>
@@ -199,14 +219,14 @@ export default function OnlineChess() {
         <div className='grid2 mt8'>
           {g.move_count < 2
             ? <Button variant='ghost' onClick={() => act('abort_game', { p_game: g.id })}>Abort</Button>
-            : <Button variant='danger' onClick={() => act('resign_game', { p_game: g.id })}>Resign</Button>}
+            : <Button variant='danger' loading={leaving} onClick={forfeit}>Forfeit</Button>}
           {drawFromOpp
             ? <Button onClick={() => act('respond_draw', { p_game: g.id, p_accept: true })}>Accept draw</Button>
             : <Button variant='ghost' onClick={() => act('offer_draw', { p_game: g.id })}>{g.draw_offered_by === mySideWord ? 'Draw offered' : 'Offer draw'}</Button>}
         </div>
       )}
       {drawFromOpp && g.status === 'active' && <Button variant='ghost' full onClick={() => act('respond_draw', { p_game: g.id, p_accept: false })}>Decline draw</Button>}
-      <Sheet open={!!ended} onClose={() => undefined} title={outcome}>
+      <Sheet open={!!ended && !leaving} onClose={() => undefined} title={outcome}>
         {reason && <p className='muted mb12' style={{ textTransform: 'capitalize' }}>{reason}</p>}
         {g.rated && g.status === 'finished' && mySide && (
           <p className='gold bold mb12'>Rating {(mySide === 'w' ? g.white_rating_change : g.black_rating_change) >= 0 ? '+' : ''}{(mySide === 'w' ? g.white_rating_change : g.black_rating_change) ?? 0}</p>

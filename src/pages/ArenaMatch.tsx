@@ -13,6 +13,7 @@ import { Button, Sheet } from '../components/ui';
 import { aiMove, applyMove, winner as boardWinner } from '../lib/checkers';
 import type { CMove, Side } from '../lib/checkers';
 import { bestMove } from '../lib/chessAI';
+import { FORFEIT_MSG, leaveMatch } from '../lib/leaveMatch';
 import { Countdown } from '../arena/ui';
 import { SpectatorBoard } from '../arena/BoardView';
 import { GAME_LABEL, freshBoard, levelFor, nextMatchFor, playerUser, sideName, standings, useArena, useBoards } from '../arena/store';
@@ -102,9 +103,12 @@ export default function ArenaMatchPage() {
     if (m.status !== 'live') return;
     commitChecker(mv, useBoards.getState().boards[id] ?? freshBoard(), m);
   };
-  const resign = () => {
-    if (!window.confirm('Resign this match? ' + (oppName ?? 'Your opponent') + ' wins.')) return;
+  // Forfeit: ask first, record the loss, then go back to the page the player came from.
+  const forfeit = () => {
+    if (!window.confirm(FORFEIT_MSG + ' ' + (oppName ?? 'Your opponent') + ' will be the winner.')) return;
     useArena.getState().forfeit(id, me.username);
+    toast('You forfeited the match');
+    leaveMatch(nav, '/arena');
   };
 
   const result = m.result;
@@ -152,7 +156,7 @@ export default function ArenaMatchPage() {
       <div className='arena-controls'>
         <button className={'ctl' + (camOn ? ' on' : '')} onClick={() => setCamOn((v) => !v)}>{camOn ? <Video size={16} /> : <VideoOff size={16} />} Camera</button>
         <button className={'ctl' + (micOn ? ' on' : '')} onClick={() => setMicOn((v) => !v)}>{micOn ? <Mic size={16} /> : <MicOff size={16} />} Mic<span className='lvl'><i style={{ width: Math.round(Math.min(1, mic.level) * 100) + '%' }} /></span></button>
-        {live && <button className='ctl danger' onClick={resign}>Resign</button>}
+        {live && <button className='ctl danger' onClick={forfeit}>Forfeit</button>}
       </div>
       <p className='tiny tc' style={{ opacity: 0.6, padding: '8px 12px 14px' }}>Your face and voice go to your opponent peer-to-peer once the realtime backend is connected.</p>
 

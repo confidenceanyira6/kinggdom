@@ -8,6 +8,7 @@ import { Avatar, Button, Sheet, Spinner, TopBar } from '../components/ui';
 import { bestMove } from '../lib/chessAI';
 import { aiMove, applyMove, initialBoard, winner } from '../lib/checkers';
 import type { CMove, Pos, Side } from '../lib/checkers';
+import { FORFEIT_MSG, leaveMatch } from '../lib/leaveMatch';
 import { api } from '../services/api';
 import { useApp } from '../store/useApp';
 import type { GameType } from '../types';
@@ -39,6 +40,18 @@ function useSearching(mode: string) {
     return () => clearTimeout(t);
   }, [searching]);
   return searching;
+}
+
+/** Confirm, record the loss, then go back to the page the player came from. */
+function useForfeit(finish: (r: Result) => Promise<void>, done: boolean) {
+  const nav = useNavigate();
+  return async () => {
+    if (done) return;
+    if (!window.confirm(FORFEIT_MSG)) return;
+    await finish({ text: 'You forfeited', outcome: 'loss' });
+    useApp.getState().toast('You forfeited the match');
+    leaveMatch(nav);
+  };
 }
 
 type SideName = 'White' | 'Black' | 'Red';
@@ -81,6 +94,7 @@ function ChessGame({ mode, level, onAgain }: GameProps) {
   const [last, setLast] = useState<{ from: string; to: string } | null>(null);
   const [thinking, setThinking] = useState(false);
   const { result, reward, finish } = useReport('chess', mode);
+  const forfeit = useForfeit(finish, !!result);
   const searching = useSearching(mode);
   const opp = mode === 'ai' ? 'Kinggdom AI' : mode === 'local' ? 'Player 2' : 'QueenBee';
 
@@ -129,7 +143,7 @@ function ChessGame({ mode, level, onAgain }: GameProps) {
       <PlayerBar name={mode === 'local' ? 'Player 1' : user.username} side='White' active={turn === 'w'} />
       <div className='moves'>{history.length === 0 ? <span>Your move, White</span> : history.map((m, i) => <span key={i}>{i % 2 === 0 ? Math.floor(i / 2) + 1 + '.' : ''}{m}</span>)}</div>
       <div className='grid2 mt8'>
-        <Button variant='danger' onClick={() => !result && finish({ text: 'You resigned', outcome: 'loss' })}>Resign</Button>
+        <Button variant='danger' onClick={forfeit}>Forfeit</Button>
         <Button variant='ghost' onClick={onAgain}>New game</Button>
       </div>
       <ResultSheet result={result} reward={reward} onAgain={onAgain} mode={mode} />
@@ -143,6 +157,7 @@ function CheckersGame({ mode, level, onAgain }: GameProps) {
   const [turn, setTurn] = useState<Side>('r');
   const [cont, setCont] = useState<Pos | null>(null);
   const { result, reward, finish } = useReport('checkers', mode);
+  const forfeit = useForfeit(finish, !!result);
   const searching = useSearching(mode);
   const opp = mode === 'ai' ? 'Kinggdom AI' : mode === 'local' ? 'Player 2' : 'QueenBee';
 
@@ -172,7 +187,7 @@ function CheckersGame({ mode, level, onAgain }: GameProps) {
       <PlayerBar name={mode === 'local' ? 'Player 1' : user.username} side='Red' sub={count('r') + ' pieces'} active={turn === 'r'} />
       <p className='tiny muted tc'>Captures are mandatory. Reach the far row to crown a king.</p>
       <div className='grid2 mt8'>
-        <Button variant='danger' onClick={() => !result && finish({ text: 'You resigned', outcome: 'loss' })}>Resign</Button>
+        <Button variant='danger' onClick={forfeit}>Forfeit</Button>
         <Button variant='ghost' onClick={onAgain}>New game</Button>
       </div>
       <ResultSheet result={result} reward={reward} onAgain={onAgain} mode={mode} />
