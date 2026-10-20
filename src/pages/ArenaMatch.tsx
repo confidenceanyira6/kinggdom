@@ -8,11 +8,13 @@ import { useMic } from '../hooks/useMic';
 import { ChessBoard } from '../components/ChessBoard';
 import type { ChessMove } from '../components/ChessBoard';
 import { CheckersBoard } from '../components/CheckersBoard';
+import { ConfirmSheet } from '../components/ConfirmSheet';
 import { FaceCam } from '../components/StreamStage';
 import { Button, Sheet } from '../components/ui';
 import { aiMove, applyMove, winner as boardWinner } from '../lib/checkers';
 import type { CMove, Side } from '../lib/checkers';
 import { bestMove } from '../lib/chessAI';
+import { goBack } from '../lib/nav';
 import { Countdown } from '../arena/ui';
 import { SpectatorBoard } from '../arena/BoardView';
 import { GAME_LABEL, freshBoard, levelFor, nextMatchFor, playerUser, sideName, standings, useArena, useBoards } from '../arena/store';
@@ -32,6 +34,7 @@ export default function ArenaMatchPage() {
   const bs = useBoards((s) => s.boards[id]);
   const [camOn, setCamOn] = useState(true);
   const [micOn, setMicOn] = useState(true);
+  const [askResign, setAskResign] = useState(false);
   const cam = useCamera(camOn);
   const mic = useMic(micOn);
   useEffect(() => { if (cam.error) toast(cam.error); }, [cam.error, toast]);
@@ -102,9 +105,13 @@ export default function ArenaMatchPage() {
     if (m.status !== 'live') return;
     commitChecker(mv, useBoards.getState().boards[id] ?? freshBoard(), m);
   };
-  const resign = () => {
-    if (!window.confirm('Resign this match? ' + (oppName ?? 'Your opponent') + ' wins.')) return;
+  // window.confirm is blocked by many mobile browsers, so the confirmation is an in-app sheet.
+  const resign = () => setAskResign(true);
+  const confirmResign = () => {
+    setAskResign(false);
     useArena.getState().forfeit(id, me.username);
+    toast('You forfeited the match');
+    goBack(nav, '/arena/' + c.id);
   };
 
   const result = m.result;
@@ -156,7 +163,17 @@ export default function ArenaMatchPage() {
       </div>
       <p className='tiny tc' style={{ opacity: 0.6, padding: '8px 12px 14px' }}>Your face and voice go to your opponent peer-to-peer once the realtime backend is connected.</p>
 
-      <Sheet open={m.status === 'finished'} onClose={() => undefined} title={outcome === 'win' ? '🏆 You won!' : outcome === 'draw' ? 'Draw' : 'You lost'}>
+      <ConfirmSheet
+        open={askResign}
+        title='Resign this match?'
+        message={'If you resign, you will lose this match and ' + (oppName ?? 'your opponent') + ' wins.'}
+        confirmLabel='OK'
+        danger
+        onCancel={() => setAskResign(false)}
+        onConfirm={confirmResign}
+      />
+
+      <Sheet open={m.status === 'finished' && !askResign} onClose={() => undefined} title={outcome === 'win' ? '🏆 You won!' : outcome === 'draw' ? 'Draw' : 'You lost'}>
         <p className='muted mb8'>{result && result.winner ? result.winner + ' wins' + reasonText : 'The game ended in a draw'}</p>
         {c.kind === 'monthly' && pos > 0 && <p className='small mb8'>League position: <b className='gold'>{ordinal(pos)}</b></p>}
         {next ? (
