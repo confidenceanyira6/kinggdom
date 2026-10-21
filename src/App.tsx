@@ -4,6 +4,7 @@ import { RequireAuth, TabLayout, PlainLayout } from './components/AppLayout';
 import { Spinner } from './components/ui';
 import { ArenaRuntime } from './arena/ArenaRuntime';
 import { useSessionSync } from './hooks/useSessionSync';
+import { isSupabaseConfigured } from './lib/supabase';
 import { useApp } from './store/useApp';
 
 // Every screen is code-split so the first load stays small as the app grows.
@@ -58,6 +59,16 @@ export default function App() {
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
+
+  if (!isSupabaseConfigured) {
+    return (
+      <div className='shell'>
+        <div className='center-screen' style={{ padding: 24, textAlign: 'center' }}>
+          Kinggdom is not connected to its backend yet. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in the Vercel project settings, then redeploy.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className='shell'>

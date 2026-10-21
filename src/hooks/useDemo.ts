@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Chess } from 'chess.js';
 import { bestMove } from '../lib/chessAI';
 
-/** Plays an auto-running demo game. Used until live game streams come from the backend. */
+/** Plays an auto-running demo board for the live-stream / watch screens (no accounts involved). */
 export function useDemoGame(ms = 2200) {
   const g = useRef(new Chess());
   const [fen, setFen] = useState(g.current.fen());
@@ -23,18 +23,9 @@ export function useDemoGame(ms = 2200) {
   return { fen, last, moves };
 }
 
-const LINES: [string, string][] = [['ChessFan', 'This is intense!'], ['RookLord', 'King is in trouble 😬'], ['TacticsFan', 'What a move!'], ['QueenBee', 'Big brain play!'], ['ChessPro', 'Who will win?']];
-
-/** Simulated live chat. Swap for a realtime channel when the backend is connected. */
+/** Live chat shows only messages sent by real people in this session. No made-up viewers or messages. */
 export function useFakeChat() {
-  const [lines, setLines] = useState<{ by: string; text: string }[]>([{ by: 'ChessFan', text: 'This is intense!' }]);
-  useEffect(() => {
-    const t = setInterval(() => {
-      const l = LINES[Math.floor(Math.random() * LINES.length)];
-      setLines((x) => [...x.slice(-30), { by: l[0], text: l[1] }]);
-    }, 3500);
-    return () => clearInterval(t);
-  }, []);
-  const send = (by: string, text: string) => setLines((x) => [...x, { by, text }]);
+  const [lines, setLines] = useState<{ by: string; text: string }[]>([]);
+  const send = (by: string, text: string) => setLines((x) => [...x.slice(-60), { by, text }]);
   return { lines, send };
 }

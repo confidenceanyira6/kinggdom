@@ -8,10 +8,13 @@ import { useApp } from '../store/useApp';
 export function SocialButtons() {
   const nav = useNavigate();
   const setUser = useApp((s) => s.setUser);
+  const toast = useApp((s) => s.toast);
   const go = async (p: 'google' | 'apple') => {
-    const u = await api.auth.social(p);
-    setUser(u);
-    nav(u.profileComplete ? '/home' : '/setup', { replace: true });
+    try {
+      const u = await api.auth.social(p);
+      setUser(u);
+      nav(u.profileComplete ? '/home' : '/setup', { replace: true });
+    } catch (e) { toast((e as Error).message); }
   };
   return (
     <div className='col gap8'>
@@ -31,7 +34,7 @@ export default function SignUp() {
   const [err, setErr] = useState('');
 
   const submit = async () => {
-    if (!name.trim() || !id.trim() || pw.length < 6) { setErr('Enter your name, email or phone, and a password (6+ characters).'); return; }
+    if (!name.trim() || !id.trim().includes('@') || pw.length < 6) { setErr('Enter your name, a valid email address, and a password (6+ characters).'); return; }
     setBusy(true); setErr('');
     try {
       const u = await api.auth.signUp({ name: name.trim(), identifier: id.trim(), password: pw });
@@ -44,7 +47,7 @@ export default function SignUp() {
     <div className='screen nonav' style={{ paddingTop: 36 }}>
       <div className='center col gap8 mb12'><Logo /><h2>Create your account</h2></div>
       <Field icon={<User size={16} />} placeholder='Full Name' value={name} onChange={(e) => setName(e.target.value)} />
-      <Field icon={<Mail size={16} />} placeholder='Email or Phone Number' value={id} onChange={(e) => setId(e.target.value)} />
+      <Field icon={<Mail size={16} />} type='email' placeholder='Email address' value={id} onChange={(e) => setId(e.target.value)} autoCapitalize='none' autoCorrect='off' />
       <Field icon={<Lock size={16} />} type='password' placeholder='Password' value={pw} onChange={(e) => setPw(e.target.value)} />
       {err && <p className='red small mb8'>{err}</p>}
       <Button full loading={busy} onClick={submit}>Sign Up</Button>

@@ -7,9 +7,9 @@ import { useApp } from '../store/useApp';
 const AUTH_PATHS = ['/', '/login', '/signup', '/onboarding'];
 
 /**
- * Keeps the app in step with the Supabase session when the real backend is on.
- * Covers Google/Apple redirects (session arrives with no stored user) and
- * sessions that end elsewhere (token expiry, sign-out in another tab).
+ * Keeps the app in step with the Supabase session.
+ * Covers Google/Apple redirects (session arrives with no stored user), password-reset links
+ * and sessions that end elsewhere (token expiry, sign-out in another tab).
  */
 export function useSessionSync() {
   const nav = useNavigate();
@@ -17,7 +17,6 @@ export function useSessionSync() {
   path.current = useLocation().pathname;
 
   useEffect(() => {
-    if (import.meta.env.VITE_USE_MOCK !== 'false') return;
     let busy = false;
     const hydrate = async () => {
       if (busy) return;
@@ -32,7 +31,7 @@ export function useSessionSync() {
     };
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT') { useApp.getState().signOut(); return; }
-      if (session && (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && !useApp.getState().user) setTimeout(hydrate, 0);
+      if (session && (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'PASSWORD_RECOVERY') && !useApp.getState().user) setTimeout(hydrate, 0);
     });
     return () => data.subscription.unsubscribe();
   }, [nav]);
