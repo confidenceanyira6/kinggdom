@@ -5,6 +5,7 @@ import type { Post } from '../types';
 import { api } from '../services/api';
 import { profileApi } from '../services/profileApi';
 import { useApp } from '../store/useApp';
+import { ConfirmSheet } from './ConfirmSheet';
 import { Avatar, fmt } from './ui';
 
 const kindLabel: Record<Post['kind'], string> = {
@@ -129,22 +130,16 @@ export function PostCard({ post, onDeleted, onEdited }: { post: Post; onDeleted?
           </div>
         </div>
       )}
-      <ConfirmDelete open={askDelete} busy={busy} onCancel={() => setAskDelete(false)} onConfirm={remove} />
+      <ConfirmSheet
+        open={askDelete}
+        title='Delete this post?'
+        message='This cannot be undone.'
+        confirmLabel='Delete'
+        danger
+        busy={busy}
+        onCancel={() => setAskDelete(false)}
+        onConfirm={remove}
+      />
     </article>
-  );
-}
-
-function ConfirmDelete({ open, busy, onCancel, onConfirm }: { open: boolean; busy: boolean; onCancel: () => void; onConfirm: () => void }) {
-  return (
-    <ConfirmSheet
-      open={open}
-      title='Delete this post?'
-      message='This cannot be undone.'
-      confirmLabel='Delete'
-      danger
-      busy={busy}
-      onCancel={onCancel}
-      onConfirm={onConfirm}
-    />
   );
 }
