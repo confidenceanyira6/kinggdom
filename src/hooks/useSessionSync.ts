@@ -7,9 +7,10 @@ import { useApp } from '../store/useApp';
 const AUTH_PATHS = ['/', '/login', '/signup', '/onboarding'];
 
 /**
- * Keeps the app in step with the Supabase session.
- * Covers Google/Apple redirects (session arrives with no stored user), password-reset links
- * and sessions that end elsewhere (token expiry, sign-out in another tab).
+ * Keeps the app in step with the real Supabase session.
+ * - No real session on start (for example a leftover login saved by the old sample-data version):
+ *   the saved user is cleared and the person is sent to the login page.
+ * - Covers Google/Apple redirects, password-reset links and sessions that end elsewhere.
  */
 export function useSessionSync() {
   const nav = useNavigate();
@@ -29,8 +30,22 @@ export function useSessionSync() {
         if (AUTH_PATHS.includes(path.current)) nav(user.profileComplete ? '/home' : '/setup', { replace: true });
       } catch { /* stay logged out */ } finally { busy = false; }
     };
+
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT') { useApp.getState().signOut(); return; }
+      const s = useApp.getState();
+      if (event === 'SIGNED_OUT') {
+        s.signOut();
+        if (!AUTH_PATHS.includes(path.current)) nav('/login', { replace: true });
+        return;
+      }
+      if (event === 'INITIAL_SESSION') {
+        if (!session) {
+          if (s.user) s.signOut();
+          if (!AUTH_PATHS.includes(path.current)) nav('/login', { replace: true });
+          return;
+        }
+        if (s.user && s.user.id !== session.user.id) s.signOut();
+      }
       if (session && (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'PASSWORD_RECOVERY') && !useApp.getState().user) setTimeout(hydrate, 0);
     });
     return () => data.subscription.unsubscribe();
