@@ -4,10 +4,12 @@ import { Chess } from 'chess.js';
 import { ChessBoard } from '../components/ChessBoard';
 import type { ChessMove } from '../components/ChessBoard';
 import { CheckersBoard } from '../components/CheckersBoard';
+import { ConfirmSheet } from '../components/ConfirmSheet';
 import { Avatar, Button, Sheet, Spinner, TopBar } from '../components/ui';
 import { bestMove } from '../lib/chessAI';
 import { aiMove, applyMove, initialBoard, winner } from '../lib/checkers';
 import type { CMove, Pos, Side } from '../lib/checkers';
+import { goBack } from '../lib/nav';
 import { api } from '../services/api';
 import { useApp } from '../store/useApp';
 import type { GameType } from '../types';
@@ -64,25 +66,41 @@ function ResultSheet({ result, reward, onAgain, mode }: { result: Result | null;
       {mode !== 'local' && reward > 0 && <p className='gold bold mb12'>+{reward} tokens earned</p>}
       <div className='grid2'>
         <Button onClick={onAgain}>Play again</Button>
-        <Button variant='ghost' onClick={() => nav('/play')}>Exit</Button>
+        <Button variant='ghost' onClick={() => goBack(nav, '/play')}>Exit</Button>
       </div>
     </Sheet>
   );
 }
 
 function Searching() {
-  return <div className='col center gap12' style={{ minHeight: '60vh' }}><Spinner /><b>Finding an opponent...</b><span className='small muted'>Realtime matchmaking connects when the backend is live.</span></div>;
+  return <div className='col center gap12' style={{ minHeight: '60vh' }}><Spinner /><b>Finding an opponent...</b></div>;
+}
+
+function ResignConfirm({ open, onCancel, onConfirm }: { open: boolean; onCancel: () => void; onConfirm: () => void }) {
+  return (
+    <ConfirmSheet
+      open={open}
+      title='Resign this match?'
+      message='If you resign, you will lose this match.'
+      confirmLabel='OK'
+      danger
+      onCancel={onCancel}
+      onConfirm={onConfirm}
+    />
+  );
 }
 
 function ChessGame({ mode, level, onAgain }: GameProps) {
+  const nav = useNavigate();
   const user = useApp((s) => s.user)!;
   const game = useRef(new Chess());
   const [fen, setFen] = useState(game.current.fen());
   const [last, setLast] = useState<{ from: string; to: string } | null>(null);
   const [thinking, setThinking] = useState(false);
+  const [askResign, setAskResign] = useState(false);
   const { result, reward, finish } = useReport('chess', mode);
   const searching = useSearching(mode);
-  const opp = mode === 'ai' ? 'Kinggdom AI' : mode === 'local' ? 'Player 2' : 'QueenBee';
+  const opp = mode === 'ai' ? 'Kinggdom AI' : mode === 'local' ? 'Player 2' : 'Opponent';
 
   const checkEnd = () => {
     const g = game.current;
@@ -119,6 +137,13 @@ function ChessGame({ mode, level, onAgain }: GameProps) {
     } catch { return false; }
   };
 
+  const confirmResign = () => {
+    setAskResign(false);
+    if (!result) void finish({ text: 'You resigned', outcome: 'loss' });
+    useApp.getState().toast('You resigned the match');
+    goBack(nav, '/play');
+  };
+
   if (searching) return <Searching />;
   const turn = game.current.turn();
   const history = game.current.history();
@@ -129,22 +154,25 @@ function ChessGame({ mode, level, onAgain }: GameProps) {
       <PlayerBar name={mode === 'local' ? 'Player 1' : user.username} side='White' active={turn === 'w'} />
       <div className='moves'>{history.length === 0 ? <span>Your move, White</span> : history.map((m, i) => <span key={i}>{i % 2 === 0 ? Math.floor(i / 2) + 1 + '.' : ''}{m}</span>)}</div>
       <div className='grid2 mt8'>
-        <Button variant='danger' onClick={() => !result && finish({ text: 'You resigned', outcome: 'loss' })}>Resign</Button>
+        <Button variant='danger' onClick={() => !result && setAskResign(true)}>Resign</Button>
         <Button variant='ghost' onClick={onAgain}>New game</Button>
       </div>
       <ResultSheet result={result} reward={reward} onAgain={onAgain} mode={mode} />
+      <ResignConfirm open={askResign} onCancel={() => setAskResign(false)} onConfirm={confirmResign} />
     </>
   );
 }
 
 function CheckersGame({ mode, level, onAgain }: GameProps) {
+  const nav = useNavigate();
   const user = useApp((s) => s.user)!;
   const [board, setBoard] = useState(initialBoard);
   const [turn, setTurn] = useState<Side>('r');
   const [cont, setCont] = useState<Pos | null>(null);
+  const [askResign, setAskResign] = useState(false);
   const { result, reward, finish } = useReport('checkers', mode);
   const searching = useSearching(mode);
-  const opp = mode === 'ai' ? 'Kinggdom AI' : mode === 'local' ? 'Player 2' : 'QueenBee';
+  const opp = mode === 'ai' ? 'Kinggdom AI' : mode === 'local' ? 'Player 2' : 'Opponent';
 
   const apply = (m: CMove) => {
     const r = applyMove(board, m);
@@ -163,6 +191,13 @@ function CheckersGame({ mode, level, onAgain }: GameProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [board, turn, cont, result, searching]);
 
+  const confirmResign = () => {
+    setAskResign(false);
+    if (!result) void finish({ text: 'You resigned', outcome: 'loss' });
+    useApp.getState().toast('You resigned the match');
+    goBack(nav, '/play');
+  };
+
   if (searching) return <Searching />;
   const count = (s: Side) => board.flat().filter((p) => p && p.toLowerCase() === s).length;
   return (
@@ -172,10 +207,11 @@ function CheckersGame({ mode, level, onAgain }: GameProps) {
       <PlayerBar name={mode === 'local' ? 'Player 1' : user.username} side='Red' sub={count('r') + ' pieces'} active={turn === 'r'} />
       <p className='tiny muted tc'>Captures are mandatory. Reach the far row to crown a king.</p>
       <div className='grid2 mt8'>
-        <Button variant='danger' onClick={() => !result && finish({ text: 'You resigned', outcome: 'loss' })}>Resign</Button>
+        <Button variant='danger' onClick={() => !result && setAskResign(true)}>Resign</Button>
         <Button variant='ghost' onClick={onAgain}>New game</Button>
       </div>
       <ResultSheet result={result} reward={reward} onAgain={onAgain} mode={mode} />
+      <ResignConfirm open={askResign} onCancel={() => setAskResign(false)} onConfirm={confirmResign} />
     </>
   );
 }
