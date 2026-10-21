@@ -10,11 +10,11 @@ const hue = (s: string) => {
   return h;
 };
 
-export function Avatar({ name, size = 44, online, ring }: { name: string; size?: number; online?: boolean; ring?: boolean }) {
+export function Avatar({ name, size = 44, online, ring, src }: { name: string; size?: number; online?: boolean; ring?: boolean; src?: string | null }) {
   const h = hue(name);
   return (
     <div className={'avatar' + (ring ? ' ring' : '')} style={{ width: size, height: size, fontSize: size * 0.4, background: `linear-gradient(135deg,hsl(${h} 70% 48%),hsl(${(h + 50) % 360} 70% 28%))` }}>
-      {name.slice(0, 1).toUpperCase()}
+      {src ? <img src={src} alt='' style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} /> : name.slice(0, 1).toUpperCase()}
       {online !== undefined && <i className={'dot ' + (online ? 'on' : 'off')} />}
     </div>
   );
