@@ -10,7 +10,7 @@ export default function PlayMode() {
   const nav = useNavigate();
   const [level, setLevel] = useState(2);
   const go = (mode: string) => nav('/game/' + game + '?mode=' + mode + '&level=' + level);
-  const name = game === 'checkers' ? 'Checkers' : 'Chess';
+  const name = game === 'international' ? 'International Checkers' : game === 'checkers' ? 'Checkers' : 'Chess';
 
   return (
     <div className='screen nonav'>

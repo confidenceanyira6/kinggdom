@@ -36,7 +36,8 @@ export default function Play() {
 
       <div className='section-title'><h3>Other Games</h3></div>
       <div className='grid2'>
-        <Link to='/play/checkers' className='gc-mini'><div className='glyph'>⛀</div><b>Checkers</b><div className='tiny muted'>Play Now</div></Link>
+        <Link to='/play/checkers' className='gc-mini'><div className='glyph'>⛀</div><b>Checkers</b><div className='tiny muted'>8×8 · Play Now</div></Link>
+        <Link to='/play/international' className='gc-mini'><div className='glyph'>⛁</div><b>International Checkers</b><div className='tiny muted'>10×10 · Play Now</div></Link>
         <Link to='/live' className='gc-mini'><div className='glyph'><Video size={36} style={{ color: 'var(--blue)' }} /></div><b>Live Streams</b><div className='tiny muted'>Watch and chat</div></Link>
       </div>
 

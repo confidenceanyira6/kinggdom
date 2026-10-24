@@ -4,11 +4,14 @@ import { Chess } from 'chess.js';
 import { ChessBoard } from '../components/ChessBoard';
 import type { ChessMove } from '../components/ChessBoard';
 import { CheckersBoard } from '../components/CheckersBoard';
+import { DraughtsBoard } from '../components/DraughtsBoard';
 import { ConfirmSheet } from '../components/ConfirmSheet';
 import { Avatar, Button, Sheet, Spinner, TopBar } from '../components/ui';
 import { bestMove } from '../lib/chessAI';
 import { aiMove, applyMove, initialBoard, winner } from '../lib/checkers';
 import type { CMove, Pos, Side } from '../lib/checkers';
+import { applyDMove, boardKey, dAiMove, dWinner, initialDBoard, isKing, other } from '../lib/draughts';
+import type { DMove, DSide } from '../lib/draughts';
 import { goBack } from '../lib/nav';
 import { api } from '../services/api';
 import { useApp } from '../store/useApp';
@@ -216,6 +219,91 @@ function CheckersGame({ mode, level, onAgain }: GameProps) {
   );
 }
 
+function RulesSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  return (
+    <Sheet open={open} onClose={onClose} title='International Checkers rules'>
+      <ol className='drules'>
+        <li><b>Board.</b> 10×10 board, 20 pieces each on the dark squares. White moves first.</li>
+        <li><b>Men.</b> A man moves one square diagonally forward onto an empty dark square.</li>
+        <li><b>Capturing.</b> Jump over an adjacent enemy piece to the empty square just behind it. Men may capture forwards and backwards.</li>
+        <li><b>Kings.</b> A king is a flying king: it moves any number of empty squares diagonally, and captures from a distance, landing on any empty square beyond the captured piece.</li>
+        <li><b>Capture is mandatory.</b> If you can capture, you must.</li>
+        <li><b>Majority rule.</b> You must choose the route that captures the most pieces, whether with a man or a king.</li>
+        <li><b>Multi-jumps.</b> Keep jumping with the same piece until it cannot capture any more. A piece cannot be jumped twice, and captured pieces come off the board only when your move ends.</li>
+        <li><b>Crowning.</b> A man becomes a king only if its move ENDS on the far row. If it passes through that row while still capturing, it stays a man.</li>
+        <li><b>Winning.</b> You win when the opponent has no pieces left or no legal move.</li>
+        <li><b>Draws.</b> Same position three times, or 25 moves each with only king moves and no captures.</li>
+      </ol>
+      <p className='tiny muted mt8'>To make a multi-jump, tap your piece, then tap each landing square in order. The dots show your legal next squares.</p>
+    </Sheet>
+  );
+}
+
+function InternationalGame({ mode, level, onAgain }: GameProps) {
+  const nav = useNavigate();
+  const user = useApp((s) => s.user)!;
+  const [board, setBoard] = useState(initialDBoard);
+  const [turn, setTurn] = useState<DSide>('w');
+  const [lastMove, setLastMove] = useState<DMove | null>(null);
+  const [askResign, setAskResign] = useState(false);
+  const [showRules, setShowRules] = useState(false);
+  const quiet = useRef(0);
+  const seen = useRef<Record<string, number>>({});
+  const { result, reward, finish } = useReport('checkers', mode);
+  const searching = useSearching(mode);
+  const opp = mode === 'ai' ? 'Kinggdom AI' : mode === 'local' ? 'Player 2' : 'Opponent';
+
+  const apply = (m: DMove) => {
+    const mover = board[m.from[0]][m.from[1]];
+    const nb = applyDMove(board, m);
+    const next = other(turn);
+    setBoard(nb); setTurn(next); setLastMove(m);
+    quiet.current = m.caps.length === 0 && isKing(mover) ? quiet.current + 1 : 0;
+    const key = boardKey(nb) + next;
+    seen.current[key] = (seen.current[key] || 0) + 1;
+    const w = dWinner(nb, next);
+    if (w) { finish({ text: w === 'w' ? 'White wins' : 'Black wins', outcome: w === 'w' ? 'win' : 'loss' }); return; }
+    if (seen.current[key] >= 3) { finish({ text: 'Draw by repetition', outcome: 'draw' }); return; }
+    if (quiet.current >= 50) finish({ text: 'Draw: 25 moves each with only kings and no capture', outcome: 'draw' });
+  };
+
+  useEffect(() => {
+    if (mode === 'local' || turn !== 'b' || result || searching) return;
+    const t = setTimeout(() => {
+      const m = dAiMove(board, 'b', mode === 'online' ? 2 : level);
+      if (m) apply(m);
+    }, 500);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [board, turn, result, searching]);
+
+  const confirmResign = () => {
+    setAskResign(false);
+    if (!result) void finish({ text: 'You resigned', outcome: 'loss' });
+    useApp.getState().toast('You resigned the match');
+    goBack(nav, '/play');
+  };
+
+  if (searching) return <Searching />;
+  const count = (s: DSide) => board.flat().filter((p) => p && p.toLowerCase() === s).length;
+  return (
+    <>
+      <PlayerBar name={opp} side='Black' sub={count('b') + ' pieces'} active={turn === 'b'} />
+      <DraughtsBoard board={board} turn={turn} side={mode === 'local' ? 'both' : 'w'} last={lastMove} onMove={apply} />
+      <PlayerBar name={mode === 'local' ? 'Player 1' : user.username} side='White' sub={count('w') + ' pieces'} active={turn === 'w'} />
+      <p className='tiny muted tc'>Capture is mandatory and you must take the most pieces. Kings fly.</p>
+      <div className='grid2 mt8'>
+        <Button variant='danger' onClick={() => !result && setAskResign(true)}>Resign</Button>
+        <Button variant='ghost' onClick={onAgain}>New game</Button>
+      </div>
+      <div className='mt8'><Button variant='ghost' onClick={() => setShowRules(true)}>Rules</Button></div>
+      <RulesSheet open={showRules} onClose={() => setShowRules(false)} />
+      <ResultSheet result={result} reward={reward} onAgain={onAgain} mode={mode} />
+      <ResignConfirm open={askResign} onCancel={() => setAskResign(false)} onConfirm={confirmResign} />
+    </>
+  );
+}
+
 export default function Game() {
   const { game } = useParams();
   const [sp] = useSearchParams();
@@ -223,10 +311,17 @@ export default function Game() {
   const level = Number(sp.get('level') || 2);
   const [round, setRound] = useState(0);
   const again = () => setRound((r) => r + 1);
+  const name = game === 'international' ? 'International Checkers' : game === 'checkers' ? 'Checkers' : 'Chess';
   return (
     <div className='screen nonav'>
-      <TopBar title={(game === 'checkers' ? 'Checkers' : 'Chess') + ' · ' + (mode === 'ai' ? 'vs AI' : mode === 'local' ? 'Pass and play' : 'Online')} />
-      {game === 'checkers' ? <CheckersGame key={round} mode={mode} level={level} onAgain={again} /> : <ChessGame key={round} mode={mode} level={level} onAgain={again} />}
+      <TopBar title={name + ' · ' + (mode === 'ai' ? 'vs AI' : mode === 'local' ? 'Pass and play' : 'Online')} />
+      {game === 'international' ? (
+        <InternationalGame key={round} mode={mode} level={level} onAgain={again} />
+      ) : game === 'checkers' ? (
+        <CheckersGame key={round} mode={mode} level={level} onAgain={again} />
+      ) : (
+        <ChessGame key={round} mode={mode} level={level} onAgain={again} />
+      )}
     </div>
   );
 }
