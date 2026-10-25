@@ -1,0 +1,8 @@
+.gl-strip{margin:4px 0 8px;padding:8px 10px 10px;border-radius:16px;color:#fff;background:linear-gradient(180deg,rgba(47,107,255,.25),rgba(5,7,15,.65));border:1px solid rgba(255,255,255,.14)}
+.gl-head{display:flex;align-items:center;gap:8px;margin-bottom:6px;min-height:22px}
+.gl-tag{padding:3px 10px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:.06em;background:rgba(255,255,255,.16);color:#fff}
+.gl-tag.on{background:var(--red);animation:glPulse 1.4s ease-in-out infinite}
+.gl-note{font-size:12px;opacity:.85}
+.gl-cams{display:flex;align-items:center;justify-content:center;gap:14px}
+.gl-cams .cam-tile{width:104px;height:132px}
+@keyframes glPulse{0%,100%{opacity:1}50%{opacity:.6}}

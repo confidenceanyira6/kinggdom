@@ -5,7 +5,9 @@ import { Chess } from 'chess.js';
 import { ChessBoard } from '../components/ChessBoard';
 import type { ChessMove } from '../components/ChessBoard';
 import { ConfirmSheet } from '../components/ConfirmSheet';
+import { LiveButton, LiveFaces, LiveInvite } from '../components/GameLive';
 import { Avatar, Button, Sheet, Spinner, TopBar } from '../components/ui';
+import { useGameLive } from '../hooks/useGameLive';
 import { supabase, callFunction } from '../lib/supabase';
 import { goBack } from '../lib/nav';
 import { api } from '../services/api';
@@ -67,6 +69,7 @@ export default function OnlineChess() {
   const [ending, setEnding] = useState(false);
   const found = useRef(!!urlId);
   const rewarded = useRef(false);
+  const live = useGameLive({ game: 'chess', title: 'Chess: ' + names.white + ' vs ' + names.black, gameId, meId: me, active: g?.status === 'active' });
 
   // 1) Matchmaking (skipped when opening a specific game with ?id=)
   useEffect(() => {
@@ -204,6 +207,7 @@ export default function OnlineChess() {
   const meName = mySide === 'b' ? names.black : names.white;
   const oppName = mySide === 'b' ? names.white : names.black;
   const oppSide = mySide === 'b' ? 'w' : 'b';
+  const oppId: string = mySide === 'b' ? g.white_id : g.black_id;
   const mySideWord = mySide === 'b' ? 'black' : 'white';
   const drawFromOpp = g.draw_offered_by && g.draw_offered_by !== mySideWord;
   const iWon = g.winner_id && g.winner_id === me;
@@ -213,6 +217,13 @@ export default function OnlineChess() {
   return (
     <div className='screen nonav'>
       <TopBar title='Online Chess' />
+      <LiveFaces
+        phase={live.phase}
+        streams={live.streams}
+        waitingFor={oppName}
+        left={{ id: me, name: meName, username: meName, side: mySide === 'b' ? 'Black' : 'White', active: g.status === 'active' && turn === mySide, mine: true }}
+        right={{ id: oppId ?? 'opponent', name: oppName, username: oppName, side: oppSide === 'w' ? 'White' : 'Black', active: g.status === 'active' && turn === oppSide }}
+      />
       <Bar name={oppName} sub={oppSide === 'w' ? 'White' : 'Black'} active={g.status === 'active' && turn === oppSide} />
       <ChessBoard fen={fen} onMove={onMove} side={mySide ?? 'w'} flip={mySide === 'b'} last={last} />
       <Bar name={meName} sub={mySide === 'b' ? 'Black' : 'White'} active={g.status === 'active' && turn === mySide} />
@@ -228,6 +239,9 @@ export default function OnlineChess() {
         </div>
       )}
       {drawFromOpp && g.status === 'active' && <Button variant='ghost' full onClick={() => act('respond_draw', { p_game: g.id, p_accept: false })}>Decline draw</Button>}
+      {g.status === 'active' && mySide && <div className='mt8'><LiveButton phase={live.phase} onStart={live.goLive} onStop={live.stop} /></div>}
+
+      <LiveInvite phase={live.phase} name={oppName} onAccept={live.accept} onDecline={live.decline} />
 
       <ConfirmSheet
         open={confirm !== null}

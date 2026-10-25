@@ -6,7 +6,9 @@ import type { ChessMove } from '../components/ChessBoard';
 import { CheckersBoard } from '../components/CheckersBoard';
 import { DraughtsBoard } from '../components/DraughtsBoard';
 import { ConfirmSheet } from '../components/ConfirmSheet';
+import { LiveButton, LiveFaces, LiveInvite } from '../components/GameLive';
 import { Avatar, Button, Sheet, Spinner, TopBar } from '../components/ui';
+import { useGameLive } from '../hooks/useGameLive';
 import { bestMove } from '../lib/chessAI';
 import { aiMove, applyMove, initialBoard, winner } from '../lib/checkers';
 import type { CMove, Pos, Side } from '../lib/checkers';
@@ -104,6 +106,7 @@ function ChessGame({ mode, level, onAgain }: GameProps) {
   const { result, reward, finish } = useReport('chess', mode);
   const searching = useSearching(mode);
   const opp = mode === 'ai' ? 'Kinggdom AI' : mode === 'local' ? 'Player 2' : 'Opponent';
+  const live = useGameLive({ game: 'chess', title: 'Chess vs ' + opp, meId: user.id });
 
   const checkEnd = () => {
     const g = game.current;
@@ -152,6 +155,12 @@ function ChessGame({ mode, level, onAgain }: GameProps) {
   const history = game.current.history();
   return (
     <>
+      <LiveFaces
+        phase={live.phase}
+        streams={live.streams}
+        left={{ id: user.id, name: user.name, username: mode === 'local' ? 'Player 1' : user.username, rating: user.rating, side: 'White', active: turn === 'w', mine: true }}
+        right={{ id: 'opponent', name: opp, username: opp, side: 'Black', active: turn === 'b' }}
+      />
       <PlayerBar name={opp} side='Black' sub={mode === 'ai' ? 'AI level ' + level : undefined} active={turn === 'b'} />
       <ChessBoard fen={fen} onMove={onMove} side={mode === 'local' ? 'both' : 'w'} last={last} />
       <PlayerBar name={mode === 'local' ? 'Player 1' : user.username} side='White' active={turn === 'w'} />
@@ -160,6 +169,8 @@ function ChessGame({ mode, level, onAgain }: GameProps) {
         <Button variant='danger' onClick={() => !result && setAskResign(true)}>Resign</Button>
         <Button variant='ghost' onClick={onAgain}>New game</Button>
       </div>
+      <div className='mt8'><LiveButton phase={live.phase} onStart={live.goLive} onStop={live.stop} /></div>
+      <LiveInvite phase={live.phase} name={opp} onAccept={live.accept} onDecline={live.decline} />
       <ResultSheet result={result} reward={reward} onAgain={onAgain} mode={mode} />
       <ResignConfirm open={askResign} onCancel={() => setAskResign(false)} onConfirm={confirmResign} />
     </>
@@ -176,6 +187,7 @@ function CheckersGame({ mode, level, onAgain }: GameProps) {
   const { result, reward, finish } = useReport('checkers', mode);
   const searching = useSearching(mode);
   const opp = mode === 'ai' ? 'Kinggdom AI' : mode === 'local' ? 'Player 2' : 'Opponent';
+  const live = useGameLive({ game: 'checkers', title: 'Checkers vs ' + opp, meId: user.id });
 
   const apply = (m: CMove) => {
     const r = applyMove(board, m);
@@ -205,6 +217,12 @@ function CheckersGame({ mode, level, onAgain }: GameProps) {
   const count = (s: Side) => board.flat().filter((p) => p && p.toLowerCase() === s).length;
   return (
     <>
+      <LiveFaces
+        phase={live.phase}
+        streams={live.streams}
+        left={{ id: user.id, name: user.name, username: mode === 'local' ? 'Player 1' : user.username, rating: user.rating, side: 'Red', active: turn === 'r', mine: true }}
+        right={{ id: 'opponent', name: opp, username: opp, side: 'Black', active: turn === 'b' }}
+      />
       <PlayerBar name={opp} side='Black' sub={count('b') + ' pieces'} active={turn === 'b'} />
       <CheckersBoard board={board} turn={turn} cont={cont} side={mode === 'local' ? 'both' : 'r'} onMove={apply} />
       <PlayerBar name={mode === 'local' ? 'Player 1' : user.username} side='Red' sub={count('r') + ' pieces'} active={turn === 'r'} />
@@ -213,6 +231,8 @@ function CheckersGame({ mode, level, onAgain }: GameProps) {
         <Button variant='danger' onClick={() => !result && setAskResign(true)}>Resign</Button>
         <Button variant='ghost' onClick={onAgain}>New game</Button>
       </div>
+      <div className='mt8'><LiveButton phase={live.phase} onStart={live.goLive} onStop={live.stop} /></div>
+      <LiveInvite phase={live.phase} name={opp} onAccept={live.accept} onDecline={live.decline} />
       <ResultSheet result={result} reward={reward} onAgain={onAgain} mode={mode} />
       <ResignConfirm open={askResign} onCancel={() => setAskResign(false)} onConfirm={confirmResign} />
     </>
@@ -252,6 +272,7 @@ function InternationalGame({ mode, level, onAgain }: GameProps) {
   const { result, reward, finish } = useReport('checkers', mode);
   const searching = useSearching(mode);
   const opp = mode === 'ai' ? 'Kinggdom AI' : mode === 'local' ? 'Player 2' : 'Opponent';
+  const live = useGameLive({ game: 'checkers', title: 'International Checkers vs ' + opp, meId: user.id });
 
   const apply = (m: DMove) => {
     const mover = board[m.from[0]][m.from[1]];
@@ -288,6 +309,12 @@ function InternationalGame({ mode, level, onAgain }: GameProps) {
   const count = (s: DSide) => board.flat().filter((p) => p && p.toLowerCase() === s).length;
   return (
     <>
+      <LiveFaces
+        phase={live.phase}
+        streams={live.streams}
+        left={{ id: user.id, name: user.name, username: mode === 'local' ? 'Player 1' : user.username, rating: user.rating, side: 'White', active: turn === 'w', mine: true }}
+        right={{ id: 'opponent', name: opp, username: opp, side: 'Black', active: turn === 'b' }}
+      />
       <PlayerBar name={opp} side='Black' sub={count('b') + ' pieces'} active={turn === 'b'} />
       <DraughtsBoard board={board} turn={turn} side={mode === 'local' ? 'both' : 'w'} last={lastMove} onMove={apply} />
       <PlayerBar name={mode === 'local' ? 'Player 1' : user.username} side='White' sub={count('w') + ' pieces'} active={turn === 'w'} />
@@ -296,7 +323,11 @@ function InternationalGame({ mode, level, onAgain }: GameProps) {
         <Button variant='danger' onClick={() => !result && setAskResign(true)}>Resign</Button>
         <Button variant='ghost' onClick={onAgain}>New game</Button>
       </div>
-      <div className='mt8'><Button variant='ghost' onClick={() => setShowRules(true)}>Rules</Button></div>
+      <div className='grid2 mt8'>
+        <LiveButton phase={live.phase} onStart={live.goLive} onStop={live.stop} />
+        <Button variant='ghost' onClick={() => setShowRules(true)}>Rules</Button>
+      </div>
+      <LiveInvite phase={live.phase} name={opp} onAccept={live.accept} onDecline={live.decline} />
       <RulesSheet open={showRules} onClose={() => setShowRules(false)} />
       <ResultSheet result={result} reward={reward} onAgain={onAgain} mode={mode} />
       <ResignConfirm open={askResign} onCancel={() => setAskResign(false)} onConfirm={confirmResign} />
