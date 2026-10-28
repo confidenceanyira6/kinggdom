@@ -24,8 +24,10 @@ export function PostCard({ post, onDeleted, onEdited }: { post: Post; onDeleted?
   const [busy, setBusy] = useState(false);
   const [gone, setGone] = useState(false);
   const [askDelete, setAskDelete] = useState(false);
+  const [view, setView] = useState<string | null>(null);
 
   const mine = !!me && p.author.id === me.id;
+  const images = p.images ?? [];
 
   const like = () => {
     setP((x) => ({ ...x, liked: !x.liked, likes: x.likes + (x.liked ? -1 : 1) }));
@@ -61,7 +63,7 @@ export function PostCard({ post, onDeleted, onEdited }: { post: Post; onDeleted?
   };
   const saveEdit = async () => {
     const t = draft.trim();
-    if (!t) { toast('A post cannot be empty'); return; }
+    if (!t && images.length === 0) { toast('A post cannot be empty'); return; }
     setBusy(true);
     try {
       await profileApi.updatePost(p.id, t);
@@ -87,7 +89,7 @@ export function PostCard({ post, onDeleted, onEdited }: { post: Post; onDeleted?
   return (
     <article className='card post' id={p.id}>
       <div className='head'>
-        <Link to={'/u/' + p.author.username}><Avatar name={p.author.name} size={38} online={p.author.online} /></Link>
+        <Link to={'/u/' + p.author.username}><Avatar name={p.author.name} src={p.author.avatarUrl} size={38} online={p.author.online} /></Link>
         <div className='grow'>
           <Link to={'/u/' + p.author.username} className='bold'>{p.author.username}</Link>
           <div className='tiny muted'>{p.createdAt} {kindLabel[p.kind] && '· ' + kindLabel[p.kind]}</div>
@@ -110,9 +112,17 @@ export function PostCard({ post, onDeleted, onEdited }: { post: Post; onDeleted?
           </div>
         </div>
       ) : (
-        <p>{p.text}</p>
+        p.text && <p>{p.text}</p>
       )}
-      {p.kind !== 'text' && <div className='media'>{kindLabel[p.kind]}</div>}
+      {images.length > 0 ? (
+        <div style={{ display: 'grid', gridTemplateColumns: images.length === 1 ? '1fr' : '1fr 1fr', gap: 4, marginTop: 8, borderRadius: 12, overflow: 'hidden' }}>
+          {images.map((src) => (
+            <img key={src} src={src} alt='' loading='lazy' onClick={() => setView(src)} style={{ width: '100%', aspectRatio: images.length === 1 ? '4 / 3' : '1 / 1', objectFit: 'cover', cursor: 'pointer', display: 'block' }} />
+          ))}
+        </div>
+      ) : (
+        p.kind !== 'text' && <div className='media'>{kindLabel[p.kind]}</div>
+      )}
       <div className='actions'>
         <button className={'act' + (p.liked ? ' on' : '')} onClick={like}><Heart size={17} fill={p.liked ? 'currentColor' : 'none'} />{fmt(p.likes)}</button>
         <button className='act' onClick={() => setOpen((o) => !o)}><MessageCircle size={17} />{fmt(p.comments)}</button>
@@ -128,6 +138,11 @@ export function PostCard({ post, onDeleted, onEdited }: { post: Post; onDeleted?
             <input placeholder='Write a comment or reply...' value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && send()} />
             <button className='btn primary sm' onClick={send}>Send</button>
           </div>
+        </div>
+      )}
+      {view && (
+        <div role='dialog' onClick={() => setView(null)} style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 12 }}>
+          <img src={view} alt='' style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
         </div>
       )}
       <ConfirmSheet

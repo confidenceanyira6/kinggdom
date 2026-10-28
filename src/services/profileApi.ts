@@ -1,5 +1,6 @@
 import type { Post, User } from '../types';
 import { supabase } from '../lib/supabase';
+import { attachMedia } from './mediaApi';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Row = Record<string, any>;
@@ -86,7 +87,7 @@ export const profileApi: ProfileApi = {
       liked = new Set((l.data ?? []).map((x: Row) => x.post_id));
       saved = new Set((s.data ?? []).map((x: Row) => x.post_id));
     }
-    return rows.map((r) => ({
+    const posts: Post[] = rows.map((r) => ({
       id: r.id,
       author: user,
       kind: (r.kind === 'repost' ? 'text' : r.kind) as Post['kind'],
@@ -98,6 +99,7 @@ export const profileApi: ProfileApi = {
       saved: saved.has(r.id),
       createdAt: ago(r.created_at),
     }));
+    return attachMedia(posts);
   },
 
   async recentGames(userId) {
