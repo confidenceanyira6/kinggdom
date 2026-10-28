@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { api } from '../services/api';
 import { useAsync } from '../hooks/useAsync';
+import { useFeePct } from '../hooks/useFeePct';
 import { Avatar, Button, Coin, Empty, Loading, Tabs, TopBar, fmt } from '../components/ui';
 import { JoinSheet } from '../components/JoinSheet';
 
@@ -12,6 +13,7 @@ export default function TournamentDetails() {
   const { id = '' } = useParams();
   const { data: t, loading, setData } = useAsync(() => api.tournaments.get(id), [id]);
   const board = useAsync(() => api.leaderboard.get('global'));
+  const pct = useFeePct();
   const [tab, setTab] = useState<Tab>('info');
   const [ask, setAsk] = useState(false);
 
@@ -32,6 +34,12 @@ export default function TournamentDetails() {
         <span style={{ fontSize: 44 }}>🏆</span>
         <div><h2>{t.name}</h2><div className='small muted'>{t.game === 'chess' ? 'Chess' : 'Checkers'} · {t.maxPlayers} players</div><div className='gold bold small'>Prize pool {fmt(t.prizePool)} tokens</div><div className='tiny muted'>{t.status === 'completed' ? 'Ended' : 'Starts in ' + t.startsIn}</div></div>
       </div>
+      {t.host && (
+        <div className='card mt12'>
+          <div className='small'>Hosted by <Link to={'/u/' + t.host.username} className='bold'>@{t.host.username}</Link></div>
+          {pct !== null && <div className='tiny muted mt8'>Platform fee: Kinggdom keeps {pct}% of entry fees ({t.entryFee ? 'the rest goes to the prize pool' : 'this competition is free to enter'}) and {pct}% of gifts the host receives while live with a competition.</div>}
+        </div>
+      )}
       <div className='progress mt12'><i style={{ width: (t.players / t.maxPlayers) * 100 + '%' }} /></div>
       <div className='tiny muted mt8'>{t.players}/{t.maxPlayers} registered · Entry {t.entryFee ? t.entryFee + ' tokens' : 'free'}</div>
       <Tabs<Tab> tabs={[{ id: 'info', label: 'Info' }, { id: 'players', label: 'Players' }, { id: 'bracket', label: 'Bracket' }]} value={tab} onChange={setTab} />
