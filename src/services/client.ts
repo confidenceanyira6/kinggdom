@@ -15,7 +15,7 @@ export interface ApiClient {
   };
   feed: {
     list(): Promise<Post[]>;
-    create(i: { text: string; kind: Post['kind'] }): Promise<Post>;
+    create(i: { text: string; kind: Post['kind']; images?: File[] }): Promise<Post>;
     like(id: string): Promise<void>;
     save(id: string): Promise<void>;
     comment(id: string, text: string): Promise<void>;

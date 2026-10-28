@@ -5,6 +5,7 @@ export interface User {
   id: string;
   name: string;
   username: string;
+  avatarUrl?: string;
   level: number;
   bio: string;
   country: string;
@@ -30,6 +31,7 @@ export interface Post {
   author: User;
   kind: 'text' | 'image' | 'video' | 'replay' | 'puzzle' | 'tournament' | 'stream';
   text: string;
+  images?: string[];
   likes: number;
   comments: number;
   shares: number;
@@ -53,6 +55,7 @@ export interface Tournament {
   id: string;
   name: string;
   game: GameType;
+  scope?: 'daily' | 'weekly' | 'monthly' | 'special';
   prizePool: number;
   entryFee: number;
   players: number;
