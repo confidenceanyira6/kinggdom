@@ -41,6 +41,7 @@ export function MenuList() {
     {
       title: 'Create',
       rows: [
+        { to: '/host', label: 'Host a competition', sub: 'Kingdom Host $5/month · 3% platform fee', icon: Trophy },
         { to: '/live/start', label: 'Go Live', sub: 'Stream your game with your face cam', icon: Video },
         { to: '/create-post', label: 'Create post', icon: Edit3 },
       ],

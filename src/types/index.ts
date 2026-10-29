@@ -56,6 +56,9 @@ export interface Tournament {
   name: string;
   game: GameType;
   scope?: 'daily' | 'weekly' | 'monthly' | 'special';
+  /** false for competitions hosted by a user (the platform fee applies); true for official Kinggdom ones. */
+  official?: boolean;
+  host?: { id: string; username: string };
   prizePool: number;
   entryFee: number;
   players: number;

@@ -38,6 +38,7 @@ const Community = lazy(() => import('./pages/Community'));
 const Tournaments = lazy(() => import('./pages/Tournaments'));
 const TournamentDetails = lazy(() => import('./pages/TournamentDetails'));
 const CreateTournament = lazy(() => import('./pages/CreateTournament'));
+const Host = lazy(() => import('./pages/Host'));
 const Leaderboard = lazy(() => import('./pages/Leaderboard'));
 const CreatePost = lazy(() => import('./pages/CreatePost'));
 const Referral = lazy(() => import('./pages/Referral'));
@@ -112,6 +113,7 @@ export default function App() {
               <Route path='/tournaments' element={<Tournaments />} />
               <Route path='/tournaments/new' element={<CreateTournament />} />
               <Route path='/tournaments/:id' element={<TournamentDetails />} />
+              <Route path='/host' element={<Host />} />
               <Route path='/leaderboard' element={<Leaderboard />} />
               <Route path='/create-post' element={<CreatePost />} />
               <Route path='/referral' element={<Referral />} />

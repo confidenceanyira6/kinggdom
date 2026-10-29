@@ -70,11 +70,27 @@ export async function attachMedia(posts: Post[]): Promise<Post[]> {
   }));
 }
 
-/** Adds the competition scope (daily / weekly / monthly / special) to tournaments. */
+/** Adds the competition scope (daily / weekly / monthly / special) and, for user-hosted ones, the host. */
 export async function attachScope(ts: Tournament[]): Promise<Tournament[]> {
   if (!ts.length) return ts;
-  const r = await supabase.from('tournaments').select('id,scope').in('id', ts.map((t) => t.id));
+  const r = await supabase.from('tournaments').select('id,scope,is_official,created_by').in('id', ts.map((t) => t.id));
   if (r.error || !r.data) return ts;
-  const scopes = new Map<string, Tournament['scope']>((r.data as Row[]).map((x) => [x.id as string, x.scope as Tournament['scope']]));
-  return ts.map((t) => ({ ...t, scope: scopes.get(t.id) }));
+  const rows = new Map<string, Row>((r.data as Row[]).map((x) => [x.id as string, x]));
+  const hostIds = Array.from(new Set((r.data as Row[]).filter((x) => !x.is_official && x.created_by).map((x) => x.created_by as string)));
+  const names = new Map<string, string>();
+  if (hostIds.length) {
+    const p = await supabase.from('profiles').select('id,username').in('id', hostIds);
+    ((p.data ?? []) as Row[]).forEach((x) => names.set(x.id, x.username));
+  }
+  return ts.map((t) => {
+    const x = rows.get(t.id);
+    if (!x) return t;
+    const hosted = !x.is_official && !!x.created_by;
+    return {
+      ...t,
+      scope: x.scope as Tournament['scope'],
+      official: !!x.is_official,
+      host: hosted ? { id: x.created_by as string, username: names.get(x.created_by) ?? 'host' } : undefined,
+    };
+  });
 }
